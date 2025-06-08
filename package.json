@@ -1,12 +1,17 @@
 {
   "name": "clinica-provider-schedule",
   "private": true,
-  "version": "0.0.5",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:analyze": "vite build --mode analyze",
+    "build:production": "NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "preview:production": "vite build && vite preview",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.1.0",
