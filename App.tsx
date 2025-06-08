@@ -17,6 +17,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CalendarGrid from './components/CalendarGrid';
 import WeeklyCalendarGrid from './components/WeeklyCalendarGrid';
+import DayCalendarGrid from './components/DayCalendarGrid';
 import Modal from './components/Modal';
 import ProviderForm from './components/ProviderForm';
 import ClinicTypeForm from './components/ClinicTypeForm';
@@ -626,6 +627,7 @@ const App: React.FC = () => {
     setCurrentDate(prev => {
       if (calendarViewMode === 'month') return addMonths(prev, -1);
       if (calendarViewMode === 'week') return dateAddDays(prev, -7);
+      if (calendarViewMode === 'day') return dateAddDays(prev, -1);
       return prev;
     });
   };
@@ -633,6 +635,7 @@ const App: React.FC = () => {
     setCurrentDate(prev => {
       if (calendarViewMode === 'month') return addMonths(prev, 1);
       if (calendarViewMode === 'week') return dateAddDays(prev, 7);
+      if (calendarViewMode === 'day') return dateAddDays(prev, 1);
       return prev;
     });
   };
@@ -844,7 +847,14 @@ const App: React.FC = () => {
 
   const centralDateDisplay = calendarViewMode === 'month' 
     ? getMonthYearString(currentDate) 
-    : getWeekRangeString(currentDate, userSettings.weekStartsOn);
+    : calendarViewMode === 'week'
+    ? getWeekRangeString(currentDate, userSettings.weekStartsOn)
+    : currentDate.toLocaleDateString(undefined, { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
 
   const appContextValue: AppContextType = {
     providers, clinics, medicalAssistants, shifts, 
@@ -895,14 +905,22 @@ const App: React.FC = () => {
                       <button
                         onClick={handleNavigatePrevious}
                         className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-                        aria-label={calendarViewMode === 'month' ? "Previous month" : "Previous week"}
+                        aria-label={
+                          calendarViewMode === 'month' ? "Previous month" : 
+                          calendarViewMode === 'week' ? "Previous week" : 
+                          "Previous day"
+                        }
                       >
                         <ChevronLeftIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                       </button>
                       <button
                         onClick={handleNavigateNext}
                         className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-                        aria-label={calendarViewMode === 'month' ? "Next month" : "Next week"}
+                        aria-label={
+                          calendarViewMode === 'month' ? "Next month" : 
+                          calendarViewMode === 'week' ? "Next week" : 
+                          "Next day"
+                        }
                       >
                         <ChevronRightIcon className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                       </button>
@@ -916,13 +934,20 @@ const App: React.FC = () => {
                               conflictingShiftIds={conflictingShiftIds}
                               weekStartsOn={userSettings.weekStartsOn}
                           />
-                      ) : (
+                      ) : calendarViewMode === 'week' ? (
                           <WeeklyCalendarGrid
                               currentDate={currentDate}
                               allShifts={shifts}
                               filters={filters}
                               conflictingShiftIds={conflictingShiftIds}
                               weekStartsOn={userSettings.weekStartsOn}
+                          />
+                      ) : (
+                          <DayCalendarGrid
+                              currentDate={currentDate}
+                              allShifts={shifts}
+                              filters={filters}
+                              conflictingShiftIds={conflictingShiftIds}
                           />
                       )}
                     </div>

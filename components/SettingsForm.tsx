@@ -72,7 +72,7 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
         >
           <option value="month">Month</option>
           <option value="week">Week</option>
-          {/* <option value="day">Day</option> */}
+          <option value="day">Day</option>
         </select>
         <p id="defaultCalendarViewHelp" className="mt-1 text-xs text-gray-500">Select the view that the calendar will default to when the application loads.</p>
       </div>

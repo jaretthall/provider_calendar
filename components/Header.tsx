@@ -71,12 +71,12 @@ const Header: React.FC<HeaderProps> = ({
             >
                 Week
             </button>
-             {/* <button
+            <button
                 onClick={() => onSetCalendarViewMode('day')}
                 className={viewModeButtonClasses(calendarViewMode === 'day')}
              >
                 Day
-             </button> */}
+             </button>
           </div>
         </div>
         
