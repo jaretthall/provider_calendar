@@ -32,6 +32,9 @@ import PdfExportSetupModal from './components/PdfExportSetupModal';
 import LoginForm from './components/LoginForm';
 import SupabaseLoginForm from './components/SupabaseLoginForm';
 import { SupabaseAuthProvider, useSupabaseAuth } from './components/SupabaseAuthProvider';
+import UserManagementProvider from './components/UserManagementProvider';
+import UserManagementDashboard from './components/UserManagementDashboard';
+import PendingApproval from './components/PendingApproval';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import SupabaseTest from './components/SupabaseTest';
@@ -61,6 +64,7 @@ import {
 } from './utils/dateUtils';
 import { detectAllShiftConflicts } from './utils/conflictUtils';
 import { isSupabaseConfigured } from './utils/supabase';
+import { useUserManagement } from './hooks/useUserManagement';
 import ChevronLeftIcon from './components/icons/ChevronLeftIcon';
 import ChevronRightIcon from './components/icons/ChevronRightIcon';
 import ShiftDragOverlayPreview from './components/ShiftDragOverlayPreview';
@@ -114,9 +118,46 @@ const AuthenticatedApp: React.FC = () => {
         </div>
       );
     }
+
+    // If user is authenticated but in Supabase mode, wrap with user management
+    return (
+      <UserManagementProvider>
+        <UserApprovalGate />
+      </UserManagementProvider>
+    );
   }
 
-  // Render the main application
+  // Render the main application (demo mode)
+  return <MainApplication />;
+};
+
+// User approval gate component for Supabase users
+const UserApprovalGate: React.FC = () => {
+  const { currentUserProfile, isApproved, loading, fetchCurrentUserProfile } = useUserManagement();
+
+  // Show loading while checking user status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking account status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not approved, show pending approval screen
+  if (!isApproved) {
+    return (
+      <PendingApproval 
+        userProfile={currentUserProfile} 
+        onRefresh={fetchCurrentUserProfile}
+      />
+    );
+  }
+
+  // User is approved, show main application
   return <MainApplication />;
 };
 
@@ -140,6 +181,10 @@ const MainApplication: React.FC = () => {
   const [activeDragItem, setActiveDragItem] = useState<DraggableItemData | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(userSettings.defaultCalendarView);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  
+  // Get user management context if in Supabase mode
+  const userManagement = isSupabaseConfigured() ? useUserManagement() : null;
 
   const [filters, setFilters] = useLocalStorage<FilterState>('tempoFilters', {
     providerIds: [],
@@ -149,6 +194,7 @@ const MainApplication: React.FC = () => {
   });
 
   const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
+  const isSuperAdmin = userManagement?.isSuperAdmin || false;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -989,7 +1035,9 @@ const MainApplication: React.FC = () => {
                       onSetCalendarViewMode={setCalendarViewMode}
                       centralDateDisplay={centralDateDisplay}
                       onNavigateToday={handleNavigateToday} 
-                      onExportData={handleExportData} 
+                      onExportData={handleExportData}
+                      isSuperAdmin={isSuperAdmin}
+                      onOpenUserManagement={() => setShowUserManagement(true)}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
@@ -1062,6 +1110,11 @@ const MainApplication: React.FC = () => {
                 {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
                 {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
               </Modal>
+              
+              {/* User Management Modal - outside regular modal system */}
+              {showUserManagement && isSuperAdmin && (
+                <UserManagementDashboard onClose={() => setShowUserManagement(false)} />
+              )}
               <ToastContainer toasts={toasts} dismissToast={dismissToast} />
               
               <DragOverlay dropAnimation={null}>

@@ -1,8 +1,26 @@
-# Authentication System Guide
+# User Management & Authentication System Guide
 
-## 🔐 **Clinica Provider Schedule Authentication**
+## 🔐 **Clinica Provider Schedule - Complete User Management System**
 
-Your application now supports **two authentication modes** that automatically switch based on your configuration:
+Your application now features a **comprehensive user management system** with role-based access control and admin approval workflow:
+
+---
+
+## 🎯 **Two-Tier User Management System**
+
+### **Super Administrator (You)**
+- ✅ **Complete system control**
+- ✅ **User approval/denial authority**
+- ✅ **Create new users directly**
+- ✅ **Manage all system settings**
+- ✅ **Access to User Management Dashboard**
+
+### **Schedulers (Your Team)**
+- ✅ **Full scheduling capabilities**
+- ✅ **Manage providers, clinics, shifts**
+- ✅ **Export/import data**
+- ❌ **Cannot manage other users**
+- ❌ **Cannot access system settings**
 
 ---
 
@@ -10,8 +28,8 @@ Your application now supports **two authentication modes** that automatically sw
 
 Your application is currently running in **Demo Mode** because Supabase is not configured. This provides:
 
-- ✅ Simple username/password login
-- ✅ Immediate access for testing and demos
+- ✅ Simple username/password login for testing
+- ✅ Immediate access for demos
 - ✅ All features work with localStorage
 - ✅ No setup required
 

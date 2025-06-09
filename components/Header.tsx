@@ -15,6 +15,8 @@ interface HeaderProps {
   centralDateDisplay: string;
   onNavigateToday: () => void;
   onExportData: () => void;
+  isSuperAdmin?: boolean;
+  onOpenUserManagement?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -23,7 +25,9 @@ const Header: React.FC<HeaderProps> = ({
   onSetCalendarViewMode,
   centralDateDisplay,
   onNavigateToday, 
-  onExportData 
+  onExportData,
+  isSuperAdmin = false,
+  onOpenUserManagement
 }) => {
   const authContext = useContext(AuthContext);
   const modalContext = useContext(ModalContext);
@@ -114,6 +118,16 @@ const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Export Data</span>
             <span className="sm:hidden">Export</span>
           </button>
+          {isSuperAdmin && onOpenUserManagement && (
+            <button
+              onClick={onOpenUserManagement}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-purple-500 flex items-center space-x-1"
+              title="Manage Users"
+            >
+              <span className="hidden sm:inline">Users</span>
+              <span className="sm:hidden">👥</span>
+            </button>
+          )}
           {isAdmin && (
             <button
                 onClick={() => openModal('SETTINGS_FORM' as ModalType)}
