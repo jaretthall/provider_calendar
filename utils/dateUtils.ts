@@ -9,25 +9,61 @@ const EASTERN_TIMEZONE = 'America/New_York';
  */
 export const getCurrentDateInEasternTime = (): Date => {
   const now = new Date();
-  const easternTime = new Date(now.toLocaleString("en-US", { timeZone: EASTERN_TIMEZONE }));
-  return easternTime;
+  // Use Intl.DateTimeFormat to get reliable Eastern Time values
+  const formatter = new Intl.DateTimeFormat('en-CA', { 
+    timeZone: EASTERN_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '2025');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '1') - 1; // Month is 0-indexed
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '1');
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+  
+  return new Date(year, month, day, hour, minute, second);
 };
 
 /**
  * Convert any date to Eastern Time
  */
 export const convertToEasternTime = (date: Date): Date => {
-  return new Date(date.toLocaleString("en-US", { timeZone: EASTERN_TIMEZONE }));
+  const formatter = new Intl.DateTimeFormat('en-CA', { 
+    timeZone: EASTERN_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '2025');
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '1') - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '1');
+  const hour = parseInt(parts.find(p => p.type === 'hour')?.value || '0');
+  const minute = parseInt(parts.find(p => p.type === 'minute')?.value || '0');
+  const second = parseInt(parts.find(p => p.type === 'second')?.value || '0');
+  
+  return new Date(year, month, day, hour, minute, second);
 };
 
 /**
  * Create a date in Eastern Time from date components
  */
 export const createEasternDate = (year: number, month: number, day: number): Date => {
-  // Create date string in Eastern timezone
-  const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`;
-  const utcDate = new Date(dateString);
-  return convertToEasternTime(utcDate);
+  // Create date directly without timezone conversion issues
+  return new Date(year, month, day);
 };
 
 /**
