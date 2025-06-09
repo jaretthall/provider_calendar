@@ -242,8 +242,30 @@ export const testSupabaseConnection = async () => {
   }
 
   try {
-    // Test basic connection
-    const { data, error } = await supabase!.from('providers').select('count', { count: 'exact', head: true });
+    // Test basic connection using a simple health check
+    // This doesn't require any specific tables to exist
+    const { data, error } = await supabase!.rpc('ping');
+    
+    // If RPC doesn't exist, try a simple auth check instead
+    if (error && error.code === 'PGRST202') {
+      // Function not found - try auth check instead
+      const { error: authError } = await supabase!.auth.getSession();
+      
+      if (authError && authError.message?.includes('Invalid API key')) {
+        return {
+          success: false,
+          error: 'Invalid Supabase API key',
+          details: authError
+        };
+      }
+      
+      // If we get here, basic connection is working
+      return {
+        success: true,
+        message: 'Supabase connection successful (basic connectivity verified)',
+        note: 'Database tables may need to be set up'
+      };
+    }
     
     if (error) {
       return {
@@ -256,9 +278,18 @@ export const testSupabaseConnection = async () => {
     return {
       success: true,
       message: 'Supabase connection successful',
-      providersCount: data
+      data
     };
   } catch (error: any) {
+    // If we get a network error or similar, the configuration might be wrong
+    if (error.message?.includes('fetch')) {
+      return {
+        success: false,
+        error: 'Unable to connect to Supabase - check your project URL',
+        details: error
+      };
+    }
+    
     return {
       success: false,
       error: error.message || 'Unknown connection error',

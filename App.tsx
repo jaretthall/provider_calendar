@@ -44,12 +44,7 @@ import {
   PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR, INITIAL_USER_SETTINGS 
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
-import { 
-  useSupabaseProviders, 
-  useSupabaseClinicTypes, 
-  useSupabaseMedicalAssistants, 
-  useSupabaseShifts
-} from './hooks/useSupabaseData';
+// Note: Supabase hooks available but currently using localStorage
 import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
