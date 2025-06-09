@@ -8,6 +8,7 @@ import { findConflictsForSingleShiftConfiguration } from '../utils/conflictUtils
 import TrashIcon from './icons/TrashIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
 import WarningIcon from './icons/WarningIcon';
+import { validateShiftEnhanced } from '../utils/validation';
 
 
 interface ShiftFormProps {
@@ -182,14 +183,42 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Enhanced validation using new utilities
+    const shiftValidation = validateShiftEnhanced({
+      providerId,
+      startDate: currentStartDate,
+      endDate: currentEndDate,
+      startTime: startTime || undefined,
+      endTime: endTime || undefined,
+      isVacation,
+      clinicTypeId,
+      medicalAssistantIds: selectedMAIds,
+      notes,
+      existingProviders: providers.map(p => ({ id: p.id })),
+      existingClinics: clinics.map(c => ({ id: c.id })),
+      existingMAs: medicalAssistants.map(ma => ({ id: ma.id }))
+    });
+
+    if (!shiftValidation.isValid) {
+      addToast(`Please fix the following errors: ${shiftValidation.errors.join(', ')}`, 'error');
+      return;
+    }
+
+    // Additional business logic validation
     if (!providerId) {
-      addToast("Please select a provider.", 'error'); return;
+      addToast("Please select a provider.", 'error'); 
+      return;
     }
+    
     if (!isVacation && !clinicTypeId) {
-      addToast("Please select a clinic type for a non-vacation shift.", 'error'); return;
+      addToast("Please select a clinic type for a non-vacation shift.", 'error'); 
+      return;
     }
+    
     if (new Date(currentEndDate) < new Date(currentStartDate)) {
-        addToast("End date cannot be before start date.", 'error'); return;
+      addToast("End date cannot be before start date.", 'error'); 
+      return;
     }
 
     setIsSubmitting(true);
@@ -197,37 +226,52 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       const baseShiftData = {
         providerId,
         clinicTypeId: isVacation ? undefined : clinicTypeId,
-        medicalAssistantIds: selectedMAIds, // Add selected MAs
+        medicalAssistantIds: selectedMAIds,
         startDate: currentStartDate,
         endDate: currentEndDate,
-        startTime: isVacation ? undefined : startTime,
-        endTime: isVacation ? undefined : endTime,
+        startTime: startTime || undefined,
+        endTime: endTime || undefined,
         isVacation,
-        notes: notes.trim(),
-        recurringRule: (editMode === 'singleInstance' || editMode === 'directException') ? { frequency: RecurringFrequency.NONE } : (currentRecurringRule?.frequency !== RecurringFrequency.NONE ? currentRecurringRule : undefined),
+        notes: notes.trim() || undefined,
+        recurringRule: currentRecurringRule?.frequency === RecurringFrequency.NONE ? undefined : currentRecurringRule,
         createdByUserId: currentUser?.id,
       };
 
       if (editMode === 'singleInstance' && seriesOriginalShift && instanceDate) {
-          const exceptionData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt' | 'color' | 'title' | 'seriesId'> = {
-              ...baseShiftData,
-              originalRecurringShiftId: seriesOriginalShift.seriesId || seriesOriginalShift.id, 
-              isExceptionInstance: true,
-              exceptionForDate: instanceDate,
-              recurringRule: { frequency: RecurringFrequency.NONE }, 
-          };
-          await addShift(exceptionData, true);
-      } else if (shift?.id) { 
-        await updateShift({ 
-          ...shift, 
+        const newShift = await addShift(baseShiftData, true);
+        if (newShift) {
+          addToast('Exception shift created successfully', 'success');
+        }
+      } else if (editMode === 'entireSeries' && shift) {
+        const updatedShift: Shift = {
+          ...shift,
           ...baseShiftData,
-          isExceptionInstance: shift.isExceptionInstance,
-          originalRecurringShiftId: shift.originalRecurringShiftId,
-          seriesId: shift.seriesId, 
-          exceptionForDate: shift.exceptionForDate,
-        });
-      } else { 
-        await addShift(baseShiftData, false);
+          updatedAt: new Date().toISOString(),
+        };
+        await updateShift(updatedShift);
+        addToast('Recurring shift series updated successfully', 'success');
+      } else if (editMode === 'directException' && shift) {
+        const updatedShift: Shift = {
+          ...shift,
+          ...baseShiftData,
+          recurringRule: undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        await updateShift(updatedShift);
+        addToast('Shift updated successfully', 'success');
+      } else if (shift) {
+        const updatedShift: Shift = {
+          ...shift,
+          ...baseShiftData,
+          updatedAt: new Date().toISOString(),
+        };
+        await updateShift(updatedShift);
+        addToast('Shift updated successfully', 'success');
+      } else {
+        const newShift = await addShift(baseShiftData);
+        if (newShift) {
+          addToast('Shift created successfully', 'success');
+        }
       }
       onClose();
     } catch (error) {
@@ -477,7 +521,6 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
                     onClick={handleDuplicate} 
                     className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-green-400"
                     disabled={isSubmitting}
-                    aria-busy={isSubmitting}
                 >
                     {isSubmitting && <SpinnerIcon className="mr-2 h-4 w-4" />}
                     {getDuplicateButtonText()}
@@ -488,7 +531,6 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
               className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400"
               disabled={isSubmitting || !!formConflictWarning} 
               title={formConflictWarning ? "Cannot save with unresolved conflicts indicated above." : getButtonText()}
-              aria-busy={isSubmitting}
             >
               {isSubmitting && <SpinnerIcon className="mr-2 h-4 w-4" />}
               {getButtonText()}

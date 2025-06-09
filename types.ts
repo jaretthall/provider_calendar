@@ -110,6 +110,9 @@ export interface AppContextType {
 
 export interface AuthContextType {
   currentUser: User | null;
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
   setCurrentUserRole: (role: UserRole) => void;
   isAdmin: boolean;
 }
@@ -126,7 +129,9 @@ export type ModalType =
   | 'CONFIRMATION_MODAL' 
   | 'SETTINGS_FORM'
   | 'EXPORT_OPTIONS_MODAL'
-  | 'PDF_EXPORT_SETUP_MODAL';
+  | 'PDF_EXPORT_SETUP_MODAL'
+  | 'LOGIN_FORM'
+  | 'SUPABASE_TEST';
 
 export interface ModalState {
   type: ModalType | null;

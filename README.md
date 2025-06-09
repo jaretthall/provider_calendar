@@ -1,117 +1,212 @@
 # Clinica Provider Schedule
 
-A comprehensive scheduling and calendar management system for healthcare clinics. Enables efficient management of staff schedules, tracking of vacations and time-off, and clear coordination of clinic and medical assistant assignments for providers.
+A comprehensive healthcare scheduling and calendar management application built with React, TypeScript, and TailwindCSS.
 
-## Features
+## 🚀 **New: Supabase Cloud Integration**
+
+**Version 0.2.0** introduces full cloud functionality with Supabase:
+- 🔐 **Real Authentication** (email/password, password reset)
+- ☁️ **Cloud Data Storage** (PostgreSQL with automatic backups)
+- 👥 **Multi-User Support** (isolated data per user)
+- 🔄 **Real-time Sync** (collaborative scheduling)
+- 📱 **Cross-Device Access** (data synced everywhere)
+
+See **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** for complete setup instructions.
+
+## 📋 **Features**
 
 ### Core Functionality
-- **Provider Management**: Full CRUD operations with color coding and status management
-- **Clinic Type Management**: Manage different clinic types (Emergency, Pediatrics, etc.)
-- **Medical Assistant Management**: Track and assign MAs to shifts
-- **Shift Scheduling**: Create and manage work shifts and vacation time
-- **Recurring Shifts**: Support for daily, weekly, bi-weekly, and monthly recurring schedules
-- **Exception Handling**: Edit individual instances of recurring shifts
+- **Provider Management**: Create and manage healthcare providers with color coding
+- **Clinic Type Management**: Organize different clinic specialties
+- **Medical Assistant Management**: Track support staff assignments
+- **Shift Scheduling**: Create, edit, and manage work shifts and vacations
+- **Recurring Shifts**: Support for daily, weekly, bi-weekly, and monthly patterns
+- **Conflict Detection**: Automatic detection and highlighting of scheduling conflicts
+- **Drag & Drop**: Intuitive calendar interactions for quick scheduling
 
 ### Calendar Views
-- **Month View**: Overview with shift badges and vacation indicators
-- **Week View**: Detailed daily columns with time displays
-- **Drag & Drop**: Intuitive scheduling by dragging providers and shifts
+- **Month View**: Overview of all shifts with overflow handling
+- **Week View**: Detailed weekly schedule with time slots
+- **Day View**: Granular daily view with hourly time slots
 
 ### Advanced Features
-- **Conflict Detection**: Real-time warnings for scheduling conflicts
-- **Filtering System**: Filter by providers, clinic types, MAs, and vacations
-- **User Roles**: Admin (full access) and User (read-only) modes
-- **Data Management**: JSON import/export for backup and data migration
-- **PDF Export**: Generate professional schedule reports with customization options
+- **Authentication**: Simple admin toggle (localStorage) or full Supabase auth
+- **Data Export/Import**: JSON and PDF export capabilities
+- **Filtering**: Advanced filtering by providers, clinics, MAs, and vacations
+- **Settings**: Customizable calendar preferences
+- **Error Handling**: Comprehensive error boundaries and validation
+- **Responsive Design**: Works on desktop, tablet, and mobile
 
-### PDF Export Options
-- **View Types**: List view (detailed table) or Calendar view (visual layout)
-- **Date Range**: Custom start and end dates
-- **Filtering**: Include/exclude specific providers, clinics, MAs, and vacations
-- **Output Options**: Portrait/landscape orientation, multiple paper sizes (A4, Letter, Legal)
-- **Customization**: Optional custom titles for reports
+## 🏗️ **Installation**
 
-## Run Locally
-
-**Prerequisites:** Node.js (v16 or higher recommended)
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
-
-3. **Open your browser:**
-   Navigate to `http://localhost:5173` (or the port shown in your terminal)
-
-## Build for Production
-
+### Quick Start (localStorage mode)
 ```bash
-npm run build
-npm run preview
+git clone <repository-url>
+cd clinica-provider-schedule
+npm install
+npm run dev
 ```
 
-## Technology Stack
+### Cloud Mode (with Supabase)
+1. Follow the **localStorage setup** above
+2. Create a Supabase project
+3. Follow **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** for complete configuration
+4. Add environment variables and run
 
-- **Frontend**: React 19 with TypeScript
-- **Styling**: TailwindCSS (via CDN)
-- **Drag & Drop**: @dnd-kit/core
-- **PDF Generation**: jsPDF + html2canvas
-- **Build Tool**: Vite
-- **Data Storage**: LocalStorage (browser-based)
+## 🛠️ **Development**
 
-## Architecture
+### Available Scripts
+```bash
+npm run dev                    # Start development server
+npm run build                  # Production build
+npm run build:production       # Explicit production build
+npm run preview               # Preview build locally
+npm run type-check           # TypeScript validation
+```
 
-### Data Model
-- **Providers**: Healthcare staff with color coding and status
-- **Clinic Types**: Different clinic categories with visual identification
-- **Medical Assistants**: Support staff assigned to shifts
-- **Shifts**: Work periods with provider, clinic, MA, and time assignments
-- **Recurring Rules**: Complex recurrence patterns with exception handling
+### Tech Stack
+- **React 19** with TypeScript
+- **TailwindCSS** for styling
+- **Vite** for building and development
+- **@dnd-kit** for drag and drop
+- **jsPDF + html2canvas** for PDF export
+- **Supabase** for cloud features (optional)
 
-### Key Components
-- **App.tsx**: Main application with context providers and state management
-- **Calendar Grids**: Month and week view components
-- **Modal System**: Form-based operations for all CRUD functions
-- **Drag & Drop**: Provider and shift dragging functionality
-- **PDF Export**: Comprehensive export system with customization
+## 📊 **Architecture**
 
-## Usage
+### Local Storage Mode
+- Data stored in browser localStorage
+- Simple admin/user role switching
+- Full functionality offline
+- No user isolation
 
-### Getting Started
-1. Start by adding providers, clinic types, and medical assistants
-2. Create shifts by dragging providers onto calendar days or using the "New Shift" button
-3. Set up recurring shifts for regular schedules
-4. Use filters to focus on specific staff or time periods
-5. Export schedules as JSON for backup or PDF for reporting
+### Supabase Cloud Mode
+- PostgreSQL database with Row Level Security
+- Real authentication with email/password
+- User-isolated data
+- Real-time synchronization
+- Cross-device access
 
-### PDF Export Workflow
-1. Click "Export" → "Print / Export to PDF"
-2. Configure date range and view type
-3. Select providers, clinics, and MAs to include
-4. Choose output format (orientation, paper size)
-5. Generate and download your custom PDF report
+## 🔧 **Configuration**
 
-### Administrative Features
-- Switch between Admin and User roles in the header
-- Import existing schedule data via JSON upload
-- Configure application settings (default view, week start day)
-- Manage all data with full CRUD operations
+### Environment Variables
+```bash
+# For Supabase integration (optional)
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
 
-## Version History
+### User Settings
+- Default calendar view (Month/Week/Day)
+- Week start day (Sunday/Monday)
+- Filtering preferences
 
-- **v0.0.2**: Added comprehensive PDF export functionality
-- **v0.0.1**: Added PDF library dependencies
-- **v0.0.0**: Initial application with core scheduling features
+## 📱 **Usage**
 
-## Contributing
+### Basic Workflow
+1. **Setup**: Create providers, clinic types, and medical assistants
+2. **Schedule**: Create shifts by dragging providers to calendar days
+3. **Manage**: Edit shifts, handle recurring patterns, manage exceptions
+4. **Export**: Generate PDF schedules or export data
 
-This is a production-ready healthcare scheduling application. For modifications or enhancements, please follow the existing code patterns and TypeScript conventions.
+### Authentication Modes
+- **Demo Mode**: Click "Admin" toggle for full access
+- **Cloud Mode**: Sign up/sign in with email and password
 
-## License
+## 🔒 **Security**
 
-Private/Internal Use
+### Local Storage Mode
+- Data stored locally in browser
+- No user authentication
+- Single-user application
+
+### Supabase Mode
+- Row Level Security (RLS) enforced
+- User data isolation
+- Secure authentication
+- Encrypted data transmission
+
+## 📈 **Performance**
+
+- Optimized bundle splitting for faster loading
+- Efficient conflict detection algorithms
+- Responsive design for all screen sizes
+- Production-ready build configuration
+
+## 🚀 **Deployment**
+
+### Static Hosting (localStorage mode)
+Deploy the `dist` folder to any static hosting service:
+- Netlify
+- Vercel  
+- GitHub Pages
+- Traditional web servers
+
+### Cloud Deployment (Supabase mode)
+1. Set up Supabase project
+2. Configure environment variables
+3. Deploy to any hosting service
+4. Update Supabase auth settings
+
+## 📝 **Documentation**
+
+- **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** - Complete Supabase integration guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment instructions
+- **[finish_plan.md](finish_plan.md)** - Development roadmap and features
+
+## 🆕 **What's New in v0.2.0**
+
+### 🌟 Major Features
+- **Supabase Integration**: Full cloud functionality
+- **Real Authentication**: Email/password with password reset
+- **Multi-User Support**: Isolated data per user
+- **Error Boundaries**: Comprehensive error handling
+- **Enhanced Validation**: Robust form and data validation
+
+### 🔧 Technical Improvements
+- TypeScript type safety improvements
+- Production-ready build configuration
+- Comprehensive test coverage preparation
+- Advanced error handling throughout
+
+## 🛣️ **Roadmap**
+
+### ✅ Completed
+- Core scheduling functionality
+- Multiple calendar views
+- PDF export
+- Supabase integration
+- Enhanced error handling
+
+### 🔄 In Progress
+- Real-time collaboration features
+- Advanced reporting
+- Mobile app optimization
+
+### 📋 Planned
+- Advanced analytics
+- External calendar integration
+- Automated scheduling suggestions
+- Mobile applications
+
+## 🤝 **Contributing**
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 **License**
+
+This project is licensed under the MIT License.
+
+## 📞 **Support**
+
+- Create an issue for bug reports
+- Check documentation for setup help
+- Review existing issues before creating new ones
+
+---
+
+**Built with ❤️ for healthcare professionals**

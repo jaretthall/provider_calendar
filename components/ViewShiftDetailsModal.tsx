@@ -64,6 +64,14 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
     });
   };
 
+  const handleNewShiftFromList = () => {
+    if (!isAdmin || !instanceDateContext) return;
+    closeThisModal();
+    openModal('SHIFT_FORM', { 
+        initialDate: getISODateString(instanceDateContext) 
+    });
+  };
+
   if (isListView && multipleShifts && multipleShifts.length > 0) {
     return (
         <div className="space-y-3">
@@ -105,7 +113,16 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
                     </div>
                 );
             })}
-             <div className="flex justify-end pt-4">
+             <div className="flex justify-between items-center pt-4">
+                {isAdmin && instanceDateContext && (
+                    <button 
+                        type="button" 
+                        onClick={handleNewShiftFromList}
+                        className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        + Shift
+                    </button>
+                )}
                 <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Close</button>
             </div>
         </div>

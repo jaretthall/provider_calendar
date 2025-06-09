@@ -30,7 +30,10 @@ import ConfirmationModal from './components/ConfirmationModal';
 import SettingsForm from './components/SettingsForm';
 import ExportOptionsModal from './components/ExportOptionsModal';
 import PdfExportSetupModal from './components/PdfExportSetupModal';
+import LoginForm from './components/LoginForm';
+import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
+import SupabaseTest from './components/SupabaseTest';
 import { ToastContainer } from './components/Toast';
 import { 
   Provider, ClinicType, Shift, User, UserRole, ToastMessage, 
@@ -71,13 +74,19 @@ interface DraggableItemData {
 }
 
 
+// Demo credentials for authentication
+const DEMO_CREDENTIALS = {
+  admin: { password: 'CPS2025!Secure', role: UserRole.ADMIN }
+};
+
 const App: React.FC = () => {
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
   const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
   const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
   const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMAs', INITIAL_MEDICAL_ASSISTANTS);
   const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', { id: 'admin1', username: 'Admin', role: UserRole.ADMIN });
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', null);
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -95,7 +104,7 @@ const App: React.FC = () => {
     showVacations: true,
   });
 
-  const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -205,12 +214,43 @@ const App: React.FC = () => {
                 onClose: closeModal,
             }
         });
+    } else if (type === 'LOGIN_FORM') {
+        setModalState({
+            type: 'LOGIN_FORM',
+            props: {
+                onLogin: login,
+                onClose: closeModal,
+            }
+        });
     }
     else {
         setModalState({ type, props: { ...modalPropsBase, onClose: closeModal } });
     }
   };
   
+  const login = (username: string, password: string): boolean => {
+    const credentials = DEMO_CREDENTIALS[username as keyof typeof DEMO_CREDENTIALS];
+    if (credentials && credentials.password === password) {
+      const user: User = {
+        id: uuidv4(),
+        username,
+        role: credentials.role
+      };
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      addToast(`Welcome back, ${username}!`, 'success');
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setModalState({ type: null, props: {} }); // Close any open modals
+    addToast('You have been signed out.', 'info');
+  };
+
   const setCurrentUserRole = (role: UserRole) => {
     if (currentUser) {
       setCurrentUser({ ...currentUser, role });
@@ -817,6 +857,10 @@ const App: React.FC = () => {
         return 'Export Options';
       case 'PDF_EXPORT_SETUP_MODAL':
         return 'PDF Export Configuration';
+      case 'LOGIN_FORM':
+        return 'Sign In';
+      case 'SUPABASE_TEST':
+        return 'Supabase Connection Test';
       default:
         return 'Modal';
     }
@@ -839,7 +883,10 @@ const App: React.FC = () => {
       case 'CONFIRMATION_MODAL':
       case 'EXPORT_OPTIONS_MODAL':
       case 'PDF_EXPORT_SETUP_MODAL':
+      case 'LOGIN_FORM':
         return 'md';
+      case 'SUPABASE_TEST':
+        return '4xl';
       default:
         return 'md';
     }
@@ -873,18 +920,19 @@ const App: React.FC = () => {
 
 
   return (
-    <DndContext 
-      sensors={sensors} 
-      collisionDetection={closestCenter} 
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <AppContext.Provider value={appContextValue}>
-        <AuthContext.Provider value={{ currentUser, setCurrentUserRole, isAdmin }}>
-         <SettingsContext.Provider value={settingsContextValue}>
-          <ModalContext.Provider value={{ modal: modalState, openModal, closeModal }}>
-            <ToastContext.Provider value={{ addToast }}>
-              <div className="flex h-screen bg-gray-100">
+    <ErrorBoundary>
+      <DndContext 
+        sensors={sensors} 
+        collisionDetection={closestCenter} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <AppContext.Provider value={appContextValue}>
+          <AuthContext.Provider value={{ currentUser, isAuthenticated, login, logout, setCurrentUserRole, isAdmin }}>
+           <SettingsContext.Provider value={settingsContextValue}>
+            <ModalContext.Provider value={{ modal: modalState, openModal, closeModal }}>
+              <ToastContext.Provider value={{ addToast }}>
+                <div className="flex h-screen bg-gray-100">
                 <Sidebar 
                     filters={filters} 
                     onFiltersChange={setFilters} 
@@ -968,6 +1016,8 @@ const App: React.FC = () => {
                 {modalState.type === 'CONFIRMATION_MODAL' && <ConfirmationModal {...modalState.props} onCancel={closeModal} />}
                 {modalState.type === 'EXPORT_OPTIONS_MODAL' && <ExportOptionsModal {...modalState.props} isSubmitting={isSubmitting} onClose={closeModal} />}
                 {modalState.type === 'PDF_EXPORT_SETUP_MODAL' && <PdfExportSetupModal {...modalState.props} onClose={closeModal} />}
+                {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
+                {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
               </Modal>
               <ToastContainer toasts={toasts} dismissToast={dismissToast} />
               
@@ -998,6 +1048,7 @@ const App: React.FC = () => {
         </AuthContext.Provider>
       </AppContext.Provider>
     </DndContext>
+    </ErrorBoundary>
   );
 };
 

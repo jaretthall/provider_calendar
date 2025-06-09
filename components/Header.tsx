@@ -1,6 +1,6 @@
 
 import React, { useContext } from 'react';
-import { APP_NAME, USER_ROLES_CONFIG } from '../constants';
+import { APP_NAME } from '../constants';
 import { AuthContext, ModalContext, AppContext } from '../App'; // Removed ToastContext as it's not used here
 import { UserRole, CalendarViewMode, ModalType } from '../types';
 import CalendarIcon from './icons/CalendarIcon';
@@ -31,11 +31,11 @@ const Header: React.FC<HeaderProps> = ({
   if (!authContext || !modalContext) {
     throw new Error('AuthContext or ModalContext not found');
   }
-  const { currentUser, setCurrentUserRole, isAdmin } = authContext;
+  const { currentUser, isAuthenticated, logout, isAdmin } = authContext;
   const { openModal } = modalContext;
 
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setCurrentUserRole(event.target.value as UserRole);
+  const handleLogout = () => {
+    logout();
   };
 
   const viewModeButtonClasses = (isActive: boolean) => 
@@ -98,17 +98,21 @@ const Header: React.FC<HeaderProps> = ({
           )}
            <button
             onClick={() => openModal('IMPORT_DATA_FORM')}
-            className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-            title="Import Data"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+            title="Import providers, clinics, assistants, and shifts from JSON"
           >
-            <UploadIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <UploadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Import Data</span>
+            <span className="sm:hidden">Import</span>
           </button>
           <button
             onClick={() => openModal('EXPORT_OPTIONS_MODAL' as ModalType, { onExportJson: onExportData })}
-            className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-            title="Export Options"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+            title="Export schedules to JSON or PDF"
           >
-            <DownloadIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <DownloadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Export Data</span>
+            <span className="sm:hidden">Export</span>
           </button>
           {isAdmin && (
             <button
@@ -120,21 +124,28 @@ const Header: React.FC<HeaderProps> = ({
                 <CogIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           )}
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">Role:</span>
-            <select
-                value={currentUser?.role || UserRole.USER}
-                onChange={handleRoleChange}
-                className="text-xs sm:text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 py-1 sm:py-1.5 px-1.5 sm:px-2"
-                aria-label="Change user role"
+
+          {isAuthenticated ? (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+                Admin ({currentUser?.username})
+              </span>
+              <button
+                onClick={handleLogout}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => openModal('LOGIN_FORM')}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+              title="Sign in to manage schedules"
             >
-                {Object.values(UserRole).map(role => (
-                <option key={role} value={role}>
-                    {USER_ROLES_CONFIG[role].name}
-                </option>
-                ))}
-            </select>
-          </div>
+              Admin
+            </button>
+          )}
         </div>
       </div>
     </header>
