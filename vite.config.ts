@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   
   return {
     // Base path for GitHub Pages (repository name)
-    base: isProduction ? '/Calendar/' : '/',
+    base: isProduction ? '/provider_calendar/' : '/',
     // Environment variables
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),
