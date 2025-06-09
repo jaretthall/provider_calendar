@@ -131,6 +131,7 @@ export type ModalType =
   | 'EXPORT_OPTIONS_MODAL'
   | 'PDF_EXPORT_SETUP_MODAL'
   | 'LOGIN_FORM'
+  | 'SUPABASE_LOGIN_FORM'
   | 'SUPABASE_TEST';
 
 export interface ModalState {

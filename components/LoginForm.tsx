@@ -121,8 +121,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onClose }) => {
           className="w-full text-sm bg-blue-100 text-blue-800 py-2 px-4 rounded border hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         >
-          Administrator Access<br/>
+          🔓 Auto-Login as Administrator<br/>
           <span className="text-xs text-blue-600">Username: admin | Password: CPS2025!Secure</span>
+        </button>
+        
+        <button
+          type="button"
+          onClick={() => {
+            setUsername('admin');
+            setPassword('CPS2025!Secure');
+          }}
+          className="w-full mt-2 text-sm bg-green-100 text-green-800 py-2 px-4 rounded border hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+          disabled={isLoading}
+        >
+          📝 Fill Login Form
+          <br/>
+          <span className="text-xs text-green-600">Fills the form fields for you</span>
         </button>
         
         <div className="mt-3 text-xs text-gray-500">

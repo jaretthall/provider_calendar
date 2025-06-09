@@ -96,7 +96,7 @@ const AuthenticatedApp: React.FC = () => {
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabaseAuth = isSupabaseEnabled ? useSupabaseAuth() : null;
   
-  // For Supabase mode, check if user is authenticated
+  // For Supabase mode, allow guest access with read-only functionality
   if (isSupabaseEnabled) {
     if (supabaseAuth?.loading) {
       return (
@@ -109,26 +109,21 @@ const AuthenticatedApp: React.FC = () => {
       );
     }
 
-    if (!supabaseAuth?.user) {
+    // If user is authenticated, wrap with user management
+    if (supabaseAuth?.user) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="w-full max-w-md">
-            <SupabaseLoginForm onClose={() => {}} />
-          </div>
-        </div>
+        <UserManagementProvider>
+          <UserApprovalGate />
+        </UserManagementProvider>
       );
     }
 
-    // If user is authenticated but in Supabase mode, wrap with user management
-    return (
-      <UserManagementProvider>
-        <UserApprovalGate />
-      </UserManagementProvider>
-    );
+    // Show guest mode (read-only) - no authentication required
+    return <MainApplication isGuestMode={true} />;
   }
 
   // Render the main application (demo mode)
-  return <MainApplication />;
+  return <MainApplication isGuestMode={false} />;
 };
 
 // User approval gate component for Supabase users
@@ -162,7 +157,11 @@ const UserApprovalGate: React.FC = () => {
 };
 
 // Main application component (your existing App logic)
-const MainApplication: React.FC = () => {
+interface MainApplicationProps {
+  isGuestMode?: boolean;
+}
+
+const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false }) => {
   // Use Supabase hooks with localStorage fallback
   const { data: providers, setData: setProviders, isOnline: providersOnline } = useSupabaseProviders(INITIAL_PROVIDERS);
   const { data: clinics, setData: setClinics, isOnline: clinicsOnline } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
@@ -172,7 +171,7 @@ const MainApplication: React.FC = () => {
   // User settings and auth still use localStorage for now
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', null);
-  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', isGuestMode ? false : false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
@@ -193,8 +192,9 @@ const MainApplication: React.FC = () => {
     showVacations: true,
   });
 
-  const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
-  const isSuperAdmin = userManagement?.isSuperAdmin || false;
+  // In guest mode, user is not authenticated and has no admin privileges
+  const isAdmin = !isGuestMode && isAuthenticated && currentUser?.role === UserRole.ADMIN;
+  const isSuperAdmin = !isGuestMode && (userManagement?.isSuperAdmin || false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -304,13 +304,22 @@ const MainApplication: React.FC = () => {
             }
         });
     } else if (type === 'LOGIN_FORM') {
-        setModalState({
-            type: 'LOGIN_FORM',
-            props: {
-                onLogin: login,
-                onClose: closeModal,
-            }
-        });
+        if (isGuestMode) {
+            setModalState({
+                type: 'SUPABASE_LOGIN_FORM',
+                props: {
+                    onClose: closeModal,
+                }
+            });
+        } else {
+            setModalState({
+                type: 'LOGIN_FORM',
+                props: {
+                    onLogin: login,
+                    onClose: closeModal,
+                }
+            });
+        }
     }
     else {
         setModalState({ type, props: { ...modalPropsBase, onClose: closeModal } });
@@ -948,6 +957,8 @@ const MainApplication: React.FC = () => {
         return 'PDF Export Configuration';
       case 'LOGIN_FORM':
         return 'Sign In';
+      case 'SUPABASE_LOGIN_FORM':
+        return 'Sign In';
       case 'SUPABASE_TEST':
         return 'Supabase Connection Test';
       default:
@@ -973,6 +984,7 @@ const MainApplication: React.FC = () => {
       case 'EXPORT_OPTIONS_MODAL':
       case 'PDF_EXPORT_SETUP_MODAL':
       case 'LOGIN_FORM':
+      case 'SUPABASE_LOGIN_FORM':
         return 'md';
       case 'SUPABASE_TEST':
         return '4xl';
@@ -1108,6 +1120,7 @@ const MainApplication: React.FC = () => {
                 {modalState.type === 'EXPORT_OPTIONS_MODAL' && <ExportOptionsModal {...modalState.props} isSubmitting={isSubmitting} onClose={closeModal} />}
                 {modalState.type === 'PDF_EXPORT_SETUP_MODAL' && <PdfExportSetupModal {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
+                {modalState.type === 'SUPABASE_LOGIN_FORM' && <SupabaseLoginForm {...modalState.props} />}
                 {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
               </Modal>
               
