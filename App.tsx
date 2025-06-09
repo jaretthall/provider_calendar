@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect, createContext } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
@@ -31,6 +30,8 @@ import SettingsForm from './components/SettingsForm';
 import ExportOptionsModal from './components/ExportOptionsModal';
 import PdfExportSetupModal from './components/PdfExportSetupModal';
 import LoginForm from './components/LoginForm';
+import SupabaseLoginForm from './components/SupabaseLoginForm';
+import { SupabaseAuthProvider, useSupabaseAuth } from './components/SupabaseAuthProvider';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import SupabaseTest from './components/SupabaseTest';
@@ -47,15 +48,22 @@ import {
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
 import { 
+  useSupabaseProviders, 
+  useSupabaseClinicTypes, 
+  useSupabaseMedicalAssistants, 
+  useSupabaseShifts, 
+  useSupabaseUserSettings 
+} from './hooks/useSupabaseData';
+import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
   formatDateInEasternTime 
 } from './utils/dateUtils';
 import { detectAllShiftConflicts } from './utils/conflictUtils';
+import { isSupabaseConfigured } from './utils/supabase';
 import ChevronLeftIcon from './components/icons/ChevronLeftIcon';
 import ChevronRightIcon from './components/icons/ChevronRightIcon';
 import ShiftDragOverlayPreview from './components/ShiftDragOverlayPreview';
-
 
 export const AppContext = createContext<AppContextType | null>(null);
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -74,18 +82,54 @@ interface DraggableItemData {
   maIndicators?: {initials: string, color: string}[]; 
 }
 
-
-// Demo credentials for authentication
+// Demo credentials for authentication (fallback mode)
 const DEMO_CREDENTIALS = {
   admin: { password: 'CPS2025!Secure', role: UserRole.ADMIN }
 };
 
-const App: React.FC = () => {
+// Authentication wrapper component to handle different auth modes
+const AuthenticatedApp: React.FC = () => {
+  const isSupabaseEnabled = isSupabaseConfigured();
+  const supabaseAuth = isSupabaseEnabled ? useSupabaseAuth() : null;
+  
+  // For Supabase mode, check if user is authenticated
+  if (isSupabaseEnabled) {
+    if (supabaseAuth?.loading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!supabaseAuth?.user) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="w-full max-w-md">
+            <SupabaseLoginForm onClose={() => {}} />
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Render the main application
+  return <MainApplication />;
+};
+
+// Main application component (your existing App logic)
+const MainApplication: React.FC = () => {
+  // Use Supabase hooks with localStorage fallback
+  const { data: providers, setData: setProviders, isOnline: providersOnline } = useSupabaseProviders(INITIAL_PROVIDERS);
+  const { data: clinics, setData: setClinics, isOnline: clinicsOnline } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
+  const { data: medicalAssistants, setData: setMedicalAssistants, isOnline: masOnline } = useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
+  const { data: shifts, setData: setShifts, isOnline: shiftsOnline } = useSupabaseShifts(INITIAL_SHIFTS);
+  
+  // User settings and auth still use localStorage for now
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
-  const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
-  const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
-  const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMAs', INITIAL_MEDICAL_ASSISTANTS);
-  const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', null);
   const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
@@ -96,7 +140,6 @@ const App: React.FC = () => {
   const [activeDragItem, setActiveDragItem] = useState<DraggableItemData | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(userSettings.defaultCalendarView);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
 
   const [filters, setFilters] = useLocalStorage<FilterState>('tempoFilters', {
     providerIds: [],
@@ -120,7 +163,6 @@ const App: React.FC = () => {
     setUserSettings(prev => ({...prev, ...newSettings}));
     addToast('Settings updated successfully.', 'success');
   };
-
 
   useEffect(() => {
     let detectionWindowStart: Date;
@@ -271,13 +313,13 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setProviders(prev => [...prev, newProvider]);
+    await setProviders(prev => [...prev, newProvider]);
     addToast(`Provider "${newProvider.name}" added.`, 'success');
   };
 
   const updateProvider = async (updatedProvider: Provider) => {
-    setProviders(prev => prev.map(p => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
-    setShifts(prevShifts => prevShifts.map(s => {
+    await setProviders(prev => prev.map(p => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
+    await setShifts(prevShifts => prevShifts.map(s => {
         if (s.providerId === updatedProvider.id && !s.isVacation) {
             const clinic = s.clinicTypeId ? getClinicTypeById(s.clinicTypeId) : undefined;
             return {
@@ -293,8 +335,8 @@ const App: React.FC = () => {
 
   const deleteProvider = async (providerId: string) => {
     const providerName = providers.find(p => p.id === providerId)?.name || 'Unknown Provider';
-    setProviders(prev => prev.filter(p => p.id !== providerId));
-    setShifts(prev => prev.filter(s => s.providerId !== providerId)); 
+    await setProviders(prev => prev.filter(p => p.id !== providerId));
+    await setShifts(prev => prev.filter(s => s.providerId !== providerId)); 
     addToast(`Provider "${providerName}" and their shifts deleted.`, 'success');
   };
 
@@ -305,7 +347,7 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setClinics(prev => [...prev, newClinic]);
+    await setClinics(prev => [...prev, newClinic]);
     addToast(`Clinic Type "${newClinic.name}" added.`, 'success');
   };
 
@@ -409,7 +451,7 @@ const App: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    setShifts(prev => [...prev, newShift]);
+    await setShifts(prev => [...prev, newShift]);
     addToast(isCreatingException ? 'Shift exception created.' : 'Shift created.', 'success');
     return newShift;
   };
@@ -738,8 +780,8 @@ const App: React.FC = () => {
     const dropTargetType = over.data.current?.type as 'dayCell' | undefined;
   
     if (draggedItemType === 'provider' && dropTargetType === 'dayCell') {
-      const providerId = active.data.current.providerId as string;
-      const dateString = over.data.current.dateString as string;
+      const providerId = active.data.current?.providerId as string;
+      const dateString = over.data.current?.dateString as string;
       
       // Get current filter settings to prepopulate the form
       const activeFilters = {
@@ -754,9 +796,9 @@ const App: React.FC = () => {
         filterDefaults: activeFilters,
       });
     } else if (draggedItemType === 'shift' && dropTargetType === 'dayCell') {
-      const draggedShiftId = active.data.current.shiftId as string;
+      const draggedShiftId = active.data.current?.shiftId as string;
       // const instanceDateString = active.data.current.instanceDateString as string; // Original date of dragged instance
-      const newDateString = over.data.current.dateString as string; // Target date cell
+      const newDateString = over.data.current?.dateString as string; // Target date cell
   
       if (!draggedShiftId || !newDateString) return;
   
@@ -1051,6 +1093,22 @@ const App: React.FC = () => {
     </DndContext>
     </ErrorBoundary>
   );
+};
+
+// Main App component that provides Supabase context
+const App: React.FC = () => {
+  const isSupabaseEnabled = isSupabaseConfigured();
+  
+  if (isSupabaseEnabled) {
+    return (
+      <SupabaseAuthProvider>
+        <AuthenticatedApp />
+      </SupabaseAuthProvider>
+    );
+  }
+  
+  // Fallback to demo mode without Supabase
+  return <AuthenticatedApp />;
 };
 
 export default App;
