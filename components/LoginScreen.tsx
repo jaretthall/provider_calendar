@@ -19,11 +19,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
     password: 'ViewerPass2025!'
   };
 
-  const adminAccount = {
-    email: 'admin@clinicamedicos.org', 
-    password: 'AdminPass2025!'
-  };
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) {
@@ -121,25 +116,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
                 className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Signing in...' : 'Sign in as Viewer'}
-              </button>
-            </div>
-
-            <div className="bg-white border border-gray-300 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-900">⚙️ Admin Account</h3>
-                <span className="text-xs text-gray-500">Full edit access</span>
-              </div>
-              <div className="text-xs text-gray-600 mb-3 space-y-1">
-                <div>Email: <code className="bg-gray-100 px-1 rounded">{adminAccount.email}</code></div>
-                <div>Password: <code className="bg-gray-100 px-1 rounded">{adminAccount.password}</code></div>
-              </div>
-              <button
-                type="button"
-                onClick={() => quickLogin(adminAccount.email, adminAccount.password)}
-                disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Signing in...' : 'Sign in as Admin'}
               </button>
             </div>
           </div>
