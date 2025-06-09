@@ -50,11 +50,11 @@ export function useSupabaseData<T>(
     getCurrentUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = authHelpers.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = authHelpers.onAuthStateChange((_event, session) => {
       setCurrentUser(session?.user || null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, [isOnline]);
 
   // Fetch data from Supabase

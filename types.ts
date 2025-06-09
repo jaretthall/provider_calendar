@@ -106,6 +106,7 @@ export interface AppContextType {
   getClinicTypeById: (id: string) => ClinicType | undefined;
   getMedicalAssistantById: (id: string) => MedicalAssistant | undefined; // MA getter
   getShiftById: (id: string) => Shift | undefined;
+  isOnline: boolean;
 }
 
 export interface AuthContextType {

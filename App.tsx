@@ -45,6 +45,12 @@ import {
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
 import { 
+  useSupabaseProviders, 
+  useSupabaseClinicTypes, 
+  useSupabaseMedicalAssistants, 
+  useSupabaseShifts
+} from './hooks/useSupabaseData';
+import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
   formatDateInEasternTime 
@@ -76,11 +82,20 @@ const ADMIN_PASSWORD = 'CPS2025!Admin';
 
 // Main application component
 const MainApplication: React.FC = () => {
-  // Use localStorage for data storage
+  // Use localStorage for data storage (Supabase integration available when configured)
   const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
   const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
   const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMedicalAssistants', INITIAL_MEDICAL_ASSISTANTS);
   const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
+  
+  // Check Supabase configuration status
+  const isSupabaseConfigured = Boolean(
+    import.meta.env.VITE_SUPABASE_URL && 
+    import.meta.env.VITE_SUPABASE_ANON_KEY
+  );
+  
+  // For now, we're using localStorage. Supabase integration can be enabled by setting environment variables
+  const isFullyOnline = false; // Will be true when Supabase is properly configured
   
   // User settings and auth use localStorage
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
@@ -229,13 +244,13 @@ const MainApplication: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setProviders((prev: Provider[]) => [...prev, newProvider]);
+    await setProviders((prev: Provider[]) => [...prev, newProvider]);
     addToast(`Provider "${newProvider.name}" added.`, 'success');
   };
 
   const updateProvider = async (updatedProvider: Provider) => {
-    setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
-    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
+    await setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
+    await setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
         if (s.providerId === updatedProvider.id && !s.isVacation) {
             const clinic = s.clinicTypeId ? getClinicTypeById(s.clinicTypeId) : undefined;
             return {
@@ -251,8 +266,8 @@ const MainApplication: React.FC = () => {
 
   const deleteProvider = async (providerId: string) => {
     const providerName = providers.find((p: Provider) => p.id === providerId)?.name || 'Unknown Provider';
-    setProviders((prev: Provider[]) => prev.filter((p: Provider) => p.id !== providerId));
-    setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.providerId !== providerId)); 
+    await setProviders((prev: Provider[]) => prev.filter((p: Provider) => p.id !== providerId));
+    await setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.providerId !== providerId)); 
     addToast(`Provider "${providerName}" and their shifts deleted.`, 'success');
   };
 
@@ -263,13 +278,13 @@ const MainApplication: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setClinics((prev: ClinicType[]) => [...prev, newClinic]);
+    await setClinics((prev: ClinicType[]) => [...prev, newClinic]);
     addToast(`Clinic Type "${newClinic.name}" added.`, 'success');
   };
 
   const updateClinicType = async (updatedClinic: ClinicType) => {
-    setClinics((prev: ClinicType[]) => prev.map((c: ClinicType) => c.id === updatedClinic.id ? { ...updatedClinic, updatedAt: new Date().toISOString() } : c));
-    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
+    await setClinics((prev: ClinicType[]) => prev.map((c: ClinicType) => c.id === updatedClinic.id ? { ...updatedClinic, updatedAt: new Date().toISOString() } : c));
+    await setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
         if (s.clinicTypeId === updatedClinic.id && !s.isVacation) {
             const provider = getProviderById(s.providerId);
             return {
@@ -285,8 +300,8 @@ const MainApplication: React.FC = () => {
 
   const deleteClinicType = async (clinicId: string) => {
     const clinicName = clinics.find((c: ClinicType) => c.id === clinicId)?.name || 'Unknown Clinic';
-    setClinics((prev: ClinicType[]) => prev.filter((c: ClinicType) => c.id !== clinicId));
-    setShifts((prev: Shift[]) => prev.map((s: Shift) => s.clinicTypeId === clinicId ? { ...s, clinicTypeId: undefined, title: `${getProviderById(s.providerId)?.name} @ N/A` } : s));
+    await setClinics((prev: ClinicType[]) => prev.filter((c: ClinicType) => c.id !== clinicId));
+    await setShifts((prev: Shift[]) => prev.map((s: Shift) => s.clinicTypeId === clinicId ? { ...s, clinicTypeId: undefined, title: `${getProviderById(s.providerId)?.name} @ N/A` } : s));
     addToast(`Clinic Type "${clinicName}" deleted and unassigned from shifts.`, 'success');
   };
 
@@ -297,19 +312,19 @@ const MainApplication: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setMedicalAssistants((prev: MedicalAssistant[]) => [...prev, newMA]);
+    await setMedicalAssistants((prev: MedicalAssistant[]) => [...prev, newMA]);
     addToast(`Medical Assistant "${newMA.name}" added.`, 'success');
   };
 
   const updateMedicalAssistant = async (updatedMA: MedicalAssistant) => {
-    setMedicalAssistants((prev: MedicalAssistant[]) => prev.map((ma: MedicalAssistant) => ma.id === updatedMA.id ? { ...updatedMA, updatedAt: new Date().toISOString() } : ma));
+    await setMedicalAssistants((prev: MedicalAssistant[]) => prev.map((ma: MedicalAssistant) => ma.id === updatedMA.id ? { ...updatedMA, updatedAt: new Date().toISOString() } : ma));
     addToast(`Medical Assistant "${updatedMA.name}" updated.`, 'success');
   };
 
   const deleteMedicalAssistant = async (maId: string) => {
     const maName = medicalAssistants.find((ma: MedicalAssistant) => ma.id === maId)?.name || 'Unknown MA';
-    setMedicalAssistants((prev: MedicalAssistant[]) => prev.filter((ma: MedicalAssistant) => ma.id !== maId));
-    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => ({
+    await setMedicalAssistants((prev: MedicalAssistant[]) => prev.filter((ma: MedicalAssistant) => ma.id !== maId));
+    await setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => ({
         ...s,
         medicalAssistantIds: s.medicalAssistantIds?.filter(id => id !== maId)
     })));
@@ -367,7 +382,7 @@ const MainApplication: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    setShifts((prev: Shift[]) => [...prev, newShift]);
+    await setShifts((prev: Shift[]) => [...prev, newShift]);
     addToast(isCreatingException ? 'Shift exception created.' : 'Shift created.', 'success');
     return newShift;
   };
@@ -407,7 +422,7 @@ const MainApplication: React.FC = () => {
         updatedAt: new Date().toISOString() 
     };
 
-    setShifts((prev: Shift[]) => prev.map((s: Shift) => (s.id === finalShift.id ? finalShift : s)));
+    await setShifts((prev: Shift[]) => prev.map((s: Shift) => (s.id === finalShift.id ? finalShift : s)));
     addToast('Shift updated.', 'success');
   };
 
@@ -416,13 +431,13 @@ const MainApplication: React.FC = () => {
     if (!shiftToDelete) { addToast("Shift not found to delete.", "error"); return; }
 
     if (deleteAllOccurrences && seriesIdToDelete) {
-        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.seriesId !== seriesIdToDelete && s.id !== seriesIdToDelete)); // also remove the base shift
+        await setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.seriesId !== seriesIdToDelete && s.id !== seriesIdToDelete)); // also remove the base shift
         addToast(`Recurring series and all its occurrences/exceptions deleted.`, 'success');
     } else if (shiftToDelete.isExceptionInstance) {
-        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId));
+        await setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId));
         addToast(`Shift exception for ${shiftToDelete.exceptionForDate} deleted.`, 'success');
     } else { 
-        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId)); 
+        await setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId)); 
         addToast(`Shift "${shiftToDelete.title || shiftId}" deleted.`, 'success');
     }
   };
@@ -872,7 +887,8 @@ const MainApplication: React.FC = () => {
     addMedicalAssistant, updateMedicalAssistant, deleteMedicalAssistant,
     addShift, updateShift, deleteShift, 
     importData, 
-    getProviderById, getClinicTypeById, getMedicalAssistantById, getShiftById
+    getProviderById, getClinicTypeById, getMedicalAssistantById, getShiftById,
+    isOnline: isFullyOnline
   };
   
   const settingsContextValue: SettingsContextType = {
@@ -963,7 +979,7 @@ const MainApplication: React.FC = () => {
                       )}
                     </div>
                   </main>
-                  <Footer />
+                  <Footer isOnline={isFullyOnline} />
                 </div>
               </div>
 
