@@ -79,9 +79,6 @@ interface DraggableItemData {
   maIndicators?: {initials: string, color: string}[]; 
 }
 
-// Simple admin password for backup access
-const ADMIN_PASSWORD = 'CPS2025!Admin';
-
 // Main application component (only shown when authenticated)
 const AuthenticatedApp: React.FC<{ user: any }> = ({ user }) => {
   console.log('🔐 Authenticated user:', user.email);
@@ -963,8 +960,6 @@ const AuthenticatedApp: React.FC<{ user: any }> = ({ user }) => {
 const MainApplication: React.FC = () => {
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [showAdminBackup, setShowAdminBackup] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   // Check for existing Supabase session on mount
   useEffect(() => {
@@ -1016,32 +1011,9 @@ const MainApplication: React.FC = () => {
     );
   }
 
-  // Show admin backup if requested
-  if (showAdminBackup) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-        <div className="max-w-md w-full">
-          <AdminPasswordForm 
-            onSuccess={() => {
-              setIsAdminAuthenticated(true);
-              setShowAdminBackup(false);
-            }}
-            onCancel={() => setShowAdminBackup(false)}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Show authenticated app if user is logged in OR admin backup is authenticated
-  if (supabaseUser || isAdminAuthenticated) {
-    const effectiveUser = supabaseUser || { 
-      id: 'local-admin', 
-      email: 'local-admin@localhost',
-      role: 'admin'
-    };
-    
-    return <AuthenticatedApp user={effectiveUser} />;
+  // Show authenticated app if user is logged in
+  if (supabaseUser) {
+    return <AuthenticatedApp user={supabaseUser} />;
   }
 
   // Show login screen by default
@@ -1051,7 +1023,6 @@ const MainApplication: React.FC = () => {
         // Success is handled by the auth state change listener
         console.log('Login successful');
       }}
-      onAdminBackup={() => setShowAdminBackup(true)}
     />
   );
 };

@@ -4,10 +4,9 @@ import CalendarIcon from './icons/CalendarIcon';
 
 interface LoginScreenProps {
   onSuccess: () => void;
-  onAdminBackup: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onAdminBackup }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -218,24 +217,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSuccess, onAdminBackup }) =
             </button>
           </div>
         </form>
-
-        {/* Backup Admin Option */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-gray-50 text-gray-500">Emergency Access</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={onAdminBackup}
-          className="w-full inline-flex justify-center py-2 px-4 border border-red-300 rounded-md shadow-sm bg-red-50 text-sm font-medium text-red-700 hover:bg-red-100"
-        >
-          🔓 Local Admin Backup
-        </button>
 
         <p className="mt-4 text-xs text-gray-500 text-center">
           Note: All authenticated users have full editing privileges. <br />
