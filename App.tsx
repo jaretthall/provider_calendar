@@ -44,7 +44,12 @@ import {
   PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR, INITIAL_USER_SETTINGS 
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
-// Note: Supabase hooks available but currently using localStorage
+import { 
+  useSupabaseProviders, 
+  useSupabaseClinicTypes, 
+  useSupabaseMedicalAssistants, 
+  useSupabaseShifts
+} from './hooks/useSupabaseData';
 import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
@@ -78,11 +83,30 @@ const ADMIN_PASSWORD = 'CPS2025!Admin';
 
 // Main application component
 const MainApplication: React.FC = () => {
-  // Use localStorage for data storage (Supabase integration available when configured)
-  const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
-  const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
-  const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMedicalAssistants', INITIAL_MEDICAL_ASSISTANTS);
-  const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
+  // Use Supabase for data storage when connected, localStorage as fallback
+  const { 
+    data: providers, 
+    setData: setProviders, 
+    isOnline: providersOnline 
+  } = useSupabaseProviders(INITIAL_PROVIDERS);
+  
+  const { 
+    data: clinics, 
+    setData: setClinics, 
+    isOnline: clinicsOnline 
+  } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
+  
+  const { 
+    data: medicalAssistants, 
+    setData: setMedicalAssistants, 
+    isOnline: medicalAssistantsOnline 
+  } = useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
+  
+  const { 
+    data: shifts, 
+    setData: setShifts, 
+    isOnline: shiftsOnline 
+  } = useSupabaseShifts(INITIAL_SHIFTS);
   
   // Track Supabase connection status
   const [supabaseConnectionStatus, setSupabaseConnectionStatus] = useState<boolean>(false);
@@ -95,8 +119,14 @@ const MainApplication: React.FC = () => {
         try {
           const result = await testSupabaseConnection();
           setSupabaseConnectionStatus(result.success);
-          if (!result.success) {
-            console.warn('Supabase connection test failed:', result.error);
+          if (result.success) {
+            console.log('✅ Supabase connection successful:', result.message);
+            console.log('📊 Connection details:', result.details);
+          } else {
+            console.warn('❌ Supabase connection failed:', result.error);
+            if (result.solution) {
+              console.info('💡 Solution:', result.solution);
+            }
           }
         } catch (error) {
           console.warn('Supabase connection test error:', error);
@@ -111,8 +141,8 @@ const MainApplication: React.FC = () => {
     checkConnection();
   }, []);
   
-  // Use actual Supabase connection status for online indicator
-  const isFullyOnline = supabaseConnectionStatus;
+  // Use actual Supabase data storage status for online indicator
+  const isFullyOnline = providersOnline && clinicsOnline && medicalAssistantsOnline && shiftsOnline;
   
   // User settings and auth use localStorage
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);

@@ -17,7 +17,7 @@ const Footer: React.FC<FooterProps> = ({ isOnline = false, isCheckingConnection 
     if (isOnline) {
       return {
         color: 'bg-green-500',
-        text: 'Connected to Supabase'
+        text: 'Using Supabase Database'
       };
     }
     
