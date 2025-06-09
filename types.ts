@@ -132,7 +132,8 @@ export type ModalType =
   | 'PDF_EXPORT_SETUP_MODAL'
   | 'LOGIN_FORM'
   | 'SUPABASE_LOGIN_FORM'
-  | 'SUPABASE_TEST';
+  | 'SUPABASE_TEST'
+  | 'adminPassword';
 
 export interface ModalState {
   type: ModalType | null;

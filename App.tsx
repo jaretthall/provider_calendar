@@ -24,20 +24,14 @@ import MedicalAssistantForm from './components/MedicalAssistantForm';
 import ShiftForm from './components/ShiftForm';
 import ImportDataForm from './components/ImportDataForm';
 import ViewShiftDetailsModal from './components/ViewShiftDetailsModal';
-import EditRecurrenceChoiceModal, { EditRecurrenceChoice } from './components/EditRecurrenceChoiceModal';
+import EditRecurrenceChoiceModal from './components/EditRecurrenceChoiceModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import SettingsForm from './components/SettingsForm';
 import ExportOptionsModal from './components/ExportOptionsModal';
 import PdfExportSetupModal from './components/PdfExportSetupModal';
-import LoginForm from './components/LoginForm';
-import SupabaseLoginForm from './components/SupabaseLoginForm';
-import { SupabaseAuthProvider, useSupabaseAuth } from './components/SupabaseAuthProvider';
-import UserManagementProvider from './components/UserManagementProvider';
-import UserManagementDashboard from './components/UserManagementDashboard';
-import PendingApproval from './components/PendingApproval';
+import AdminPasswordForm from './components/AdminPasswordForm';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
-import SupabaseTest from './components/SupabaseTest';
 import { ToastContainer } from './components/Toast';
 import { 
   Provider, ClinicType, Shift, User, UserRole, ToastMessage, 
@@ -51,20 +45,11 @@ import {
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
 import { 
-  useSupabaseProviders, 
-  useSupabaseClinicTypes, 
-  useSupabaseMedicalAssistants, 
-  useSupabaseShifts, 
-  useSupabaseUserSettings 
-} from './hooks/useSupabaseData';
-import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
   formatDateInEasternTime 
 } from './utils/dateUtils';
 import { detectAllShiftConflicts } from './utils/conflictUtils';
-import { isSupabaseConfigured } from './utils/supabase';
-import { useUserManagement } from './hooks/useUserManagement';
 import ChevronLeftIcon from './components/icons/ChevronLeftIcon';
 import ChevronRightIcon from './components/icons/ChevronRightIcon';
 import ShiftDragOverlayPreview from './components/ShiftDragOverlayPreview';
@@ -86,99 +71,25 @@ interface DraggableItemData {
   maIndicators?: {initials: string, color: string}[]; 
 }
 
-// Demo credentials for authentication (fallback mode)
-const DEMO_CREDENTIALS = {
-  admin: { password: 'CPS2025!Secure', role: UserRole.ADMIN }
-};
+// Simple admin password for the application
+const ADMIN_PASSWORD = 'CPS2025!Admin';
 
-// Authentication wrapper component to handle different auth modes
-const AuthenticatedApp: React.FC = () => {
-  const isSupabaseEnabled = isSupabaseConfigured();
-  const supabaseAuth = isSupabaseEnabled ? useSupabaseAuth() : null;
+// Main application component
+const MainApplication: React.FC = () => {
+  // Use localStorage for data storage
+  const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
+  const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
+  const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMedicalAssistants', INITIAL_MEDICAL_ASSISTANTS);
+  const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
   
-  // For Supabase mode, allow guest access with read-only functionality
-  if (isSupabaseEnabled) {
-    if (supabaseAuth?.loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      );
-    }
-
-    // If user is authenticated, wrap with user management
-    if (supabaseAuth?.user) {
-      return (
-        <UserManagementProvider>
-          <UserApprovalGate />
-        </UserManagementProvider>
-      );
-    }
-
-    // Show guest mode (read-only) - no authentication required
-    return <MainApplication isGuestMode={true} />;
-  }
-
-  // Render the main application (demo mode)
-  return <MainApplication isGuestMode={false} />;
-};
-
-// User approval gate component for Supabase users
-const UserApprovalGate: React.FC = () => {
-  const { currentUserProfile, isApproved, loading, fetchCurrentUserProfile, error } = useUserManagement();
-
-  // Show loading while checking user status
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking account status...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If there's an error loading the user profile, show guest mode with a note
-  if (error && !currentUserProfile) {
-    console.warn('User profile error, falling back to guest mode:', error);
-    return <MainApplication isGuestMode={true} showProfileError={true} />;
-  }
-
-  // If user is not approved, show pending approval screen
-  if (!isApproved) {
-    return (
-      <PendingApproval 
-        userProfile={currentUserProfile} 
-        onRefresh={fetchCurrentUserProfile}
-      />
-    );
-  }
-
-  // User is approved, show main application
-  return <MainApplication />;
-};
-
-// Main application component (your existing App logic)
-interface MainApplicationProps {
-  isGuestMode?: boolean;
-  showProfileError?: boolean;
-}
-
-const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, showProfileError = false }) => {
-  // Use Supabase hooks with localStorage fallback
-  const { data: providers, setData: setProviders, isOnline: providersOnline } = useSupabaseProviders(INITIAL_PROVIDERS);
-  const { data: clinics, setData: setClinics, isOnline: clinicsOnline } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
-  const { data: medicalAssistants, setData: setMedicalAssistants, isOnline: masOnline } = useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
-  const { data: shifts, setData: setShifts, isOnline: shiftsOnline } = useSupabaseShifts(INITIAL_SHIFTS);
-  
-  // User settings and auth still use localStorage for now
+  // User settings and auth use localStorage
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', null);
-  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', isGuestMode ? false : false);
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', { 
+    id: 'default-user', 
+    username: 'User', 
+    role: UserRole.USER 
+  });
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
@@ -187,10 +98,6 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
   const [activeDragItem, setActiveDragItem] = useState<DraggableItemData | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(userSettings.defaultCalendarView);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showUserManagement, setShowUserManagement] = useState(false);
-  
-  // Get user management context if in Supabase mode
-  const userManagement = isSupabaseConfigured() ? useUserManagement() : null;
 
   const [filters, setFilters] = useLocalStorage<FilterState>('tempoFilters', {
     providerIds: [],
@@ -199,9 +106,7 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
     showVacations: true,
   });
 
-  // In guest mode, user is not authenticated and has no admin privileges
-  const isAdmin = !isGuestMode && isAuthenticated && currentUser?.role === UserRole.ADMIN;
-  const isSuperAdmin = !isGuestMode && (userManagement?.isSuperAdmin || false);
+  const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -238,146 +143,84 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
     setConflictingShiftIds(conflicts);
   }, [shifts, currentDate, calendarViewMode, userSettings.weekStartsOn]);
 
-  const addToast = useCallback((message: string, type: ToastMessage['type'], duration: number = 3000) => {
+  const addToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', duration?: number) => {
     const id = uuidv4();
-    setToasts(prevToasts => [...prevToasts, { id, message, type, duration }]);
-  }, []);
-  
-  const dismissToast = (id: string) => {
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+    const toast: ToastMessage = { id, message, type, duration };
+    setToasts(prev => [...prev, toast]);
   };
 
-  // Show profile error toast in guest mode
-  useEffect(() => {
-    if (showProfileError && isGuestMode) {
-      addToast(
-        'Running in read-only mode. Sign up or contact administrator to access editing features.',
-        'info',
-        6000
-      );
-    }
-  }, [showProfileError, isGuestMode, addToast]);
+  const dismissToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const closeModal = () => setModalState({ type: null, props: {} });
 
   const openModal = (type: ModalState['type'], props?: any) => {
-    const modalPropsBase = props ? { ...props } : {};
+    // Check if admin action requires password
+    const adminActions = [
+      'addProvider', 'editProvider', 'deleteProvider',
+      'addClinicType', 'editClinicType', 'deleteClinicType', 
+      'addMedicalAssistant', 'editMedicalAssistant', 'deleteMedicalAssistant',
+      'addShift', 'editShift', 'duplicateShift', 'deleteShift',
+      'importData', 'settings'
+    ];
 
-    if (type === 'SHIFT_FORM' && 
-        modalPropsBase?.shift?.recurringRule && 
-        modalPropsBase.shift.recurringRule.frequency !== RecurringFrequency.NONE && 
-        !modalPropsBase.shift.isExceptionInstance && 
-        modalPropsBase.instanceDate && 
-        isAdmin
-       ) {
-        setModalState({ 
-            type: 'EDIT_RECURRENCE_CHOICE', 
-            props: { 
-                shiftToEdit: modalPropsBase.shift, 
-                instanceDate: modalPropsBase.instanceDate,
-                onComplete: (choice: EditRecurrenceChoice) => {
-                    const { shift: originalShiftFromArgs, ...restOfOriginalArgs } = modalPropsBase;
-
-                    if (choice === 'single') {
-                        setModalState({ 
-                            type: 'SHIFT_FORM', 
-                            props: { 
-                                ...restOfOriginalArgs, 
-                                editMode: 'singleInstance', 
-                                seriesOriginalShift: originalShiftFromArgs, 
-                                shift: null, 
-                                onClose: closeModal 
-                            } 
-                        }); 
-                    } else if (choice === 'series') {
-                        const baseShift = getShiftById(originalShiftFromArgs.seriesId || originalShiftFromArgs.id);
-                        setModalState({ 
-                            type: 'SHIFT_FORM', 
-                            props: { 
-                                ...restOfOriginalArgs, 
-                                editMode: 'entireSeries', 
-                                shift: baseShift, 
-                                onClose: closeModal 
-                            } 
-                        }); 
-                    } else { 
-                        closeModal();
-                    }
-                },
-                onClose: closeModal 
-            } 
-        });
-    } else if (type === 'SHIFT_FORM' && modalPropsBase?.shift && !isAdmin) {
-        setModalState({ type: 'VIEW_SHIFT_DETAILS', props: { ...modalPropsBase, onClose: closeModal } });
-    } else if (type === 'EXPORT_OPTIONS_MODAL') {
-        setModalState({
-            type: 'EXPORT_OPTIONS_MODAL',
-            props: {
-                ...modalPropsBase,
-                openPdfSetupModal: () => {
-                    closeModal(); // Close ExportOptionsModal
-                    openModal('PDF_EXPORT_SETUP_MODAL'); // Open PdfExportSetupModal
-                },
-                onClose: closeModal,
-            }
-        });
-    } else if (type === 'LOGIN_FORM') {
-        if (isGuestMode) {
-            setModalState({
-                type: 'SUPABASE_LOGIN_FORM',
-                props: {
-                    onClose: closeModal,
-                }
-            });
-        } else {
-            setModalState({
-                type: 'LOGIN_FORM',
-                props: {
-                    onLogin: login,
-                    onClose: closeModal,
-                }
-            });
+    if (adminActions.includes(type as string) && !isAdmin) {
+      setModalState({
+        type: 'adminPassword',
+        props: {
+          onAuthenticate: () => {
+            closeModal();
+            setModalState({ type, props });
+          }
         }
+      });
+      return;
     }
-    else {
-        setModalState({ type, props: { ...modalPropsBase, onClose: closeModal } });
-    }
+
+    setModalState({ type, props });
   };
-  
-  const login = (username: string, password: string): boolean => {
-    const credentials = DEMO_CREDENTIALS[username as keyof typeof DEMO_CREDENTIALS];
-    if (credentials && credentials.password === password) {
-      const user: User = {
-        id: uuidv4(),
-        username,
-        role: credentials.role
-      };
-      setCurrentUser(user);
+
+  // Simple authentication functions
+  const authenticateAdmin = (password: string): boolean => {
+    if (password === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
-      addToast(`Welcome back, ${username}!`, 'success');
+      setCurrentUser({ 
+        id: 'admin-user', 
+        username: 'Admin', 
+        role: UserRole.ADMIN 
+      });
+      addToast('Authenticated as admin successfully.', 'success');
       return true;
     }
+    addToast('Invalid password.', 'error');
     return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
     setIsAuthenticated(false);
-    setModalState({ type: null, props: {} }); // Close any open modals
-    addToast('You have been signed out.', 'info');
+    setCurrentUser({ 
+      id: 'default-user', 
+      username: 'User', 
+      role: UserRole.USER 
+    });
+    addToast('Logged out successfully.', 'info');
   };
 
   const setCurrentUserRole = (role: UserRole) => {
     if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
-      addToast(`Switched to ${role} role.`, 'info');
+      const updatedUser = { ...currentUser, role };
+      setCurrentUser(updatedUser);
+      if (role === UserRole.USER) {
+        setIsAuthenticated(false);
+      }
     }
   };
   
-  const getProviderById = useCallback((id: string) => providers.find(p => p.id === id), [providers]);
-  const getClinicTypeById = useCallback((id: string) => clinics.find(c => c.id === id), [clinics]);
-  const getMedicalAssistantById = useCallback((id: string) => medicalAssistants.find(ma => ma.id === id), [medicalAssistants]);
-  const getShiftById = useCallback((id: string) => shifts.find(s => s.id === id), [shifts]);
+  const getProviderById = useCallback((id: string) => providers.find((p: Provider) => p.id === id), [providers]);
+  const getClinicTypeById = useCallback((id: string) => clinics.find((c: ClinicType) => c.id === id), [clinics]);
+  const getMedicalAssistantById = useCallback((id: string) => medicalAssistants.find((ma: MedicalAssistant) => ma.id === id), [medicalAssistants]);
+  const getShiftById = useCallback((id: string) => shifts.find((s: Shift) => s.id === id), [shifts]);
 
   const addProvider = async (providerData: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newProvider: Provider = {
@@ -386,13 +229,13 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await setProviders(prev => [...prev, newProvider]);
+    setProviders((prev: Provider[]) => [...prev, newProvider]);
     addToast(`Provider "${newProvider.name}" added.`, 'success');
   };
 
   const updateProvider = async (updatedProvider: Provider) => {
-    await setProviders(prev => prev.map(p => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
-    await setShifts(prevShifts => prevShifts.map(s => {
+    setProviders((prev: Provider[]) => prev.map((p: Provider) => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
+    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
         if (s.providerId === updatedProvider.id && !s.isVacation) {
             const clinic = s.clinicTypeId ? getClinicTypeById(s.clinicTypeId) : undefined;
             return {
@@ -407,9 +250,9 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
   };
 
   const deleteProvider = async (providerId: string) => {
-    const providerName = providers.find(p => p.id === providerId)?.name || 'Unknown Provider';
-    await setProviders(prev => prev.filter(p => p.id !== providerId));
-    await setShifts(prev => prev.filter(s => s.providerId !== providerId)); 
+    const providerName = providers.find((p: Provider) => p.id === providerId)?.name || 'Unknown Provider';
+    setProviders((prev: Provider[]) => prev.filter((p: Provider) => p.id !== providerId));
+    setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.providerId !== providerId)); 
     addToast(`Provider "${providerName}" and their shifts deleted.`, 'success');
   };
 
@@ -420,13 +263,13 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    await setClinics(prev => [...prev, newClinic]);
+    setClinics((prev: ClinicType[]) => [...prev, newClinic]);
     addToast(`Clinic Type "${newClinic.name}" added.`, 'success');
   };
 
   const updateClinicType = async (updatedClinic: ClinicType) => {
-    setClinics(prev => prev.map(c => c.id === updatedClinic.id ? { ...updatedClinic, updatedAt: new Date().toISOString() } : c));
-    setShifts(prevShifts => prevShifts.map(s => {
+    setClinics((prev: ClinicType[]) => prev.map((c: ClinicType) => c.id === updatedClinic.id ? { ...updatedClinic, updatedAt: new Date().toISOString() } : c));
+    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => {
         if (s.clinicTypeId === updatedClinic.id && !s.isVacation) {
             const provider = getProviderById(s.providerId);
             return {
@@ -441,9 +284,9 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
   };
 
   const deleteClinicType = async (clinicId: string) => {
-    const clinicName = clinics.find(c => c.id === clinicId)?.name || 'Unknown Clinic';
-    setClinics(prev => prev.filter(c => c.id !== clinicId));
-    setShifts(prev => prev.map(s => s.clinicTypeId === clinicId ? { ...s, clinicTypeId: undefined, title: `${getProviderById(s.providerId)?.name} @ N/A` } : s));
+    const clinicName = clinics.find((c: ClinicType) => c.id === clinicId)?.name || 'Unknown Clinic';
+    setClinics((prev: ClinicType[]) => prev.filter((c: ClinicType) => c.id !== clinicId));
+    setShifts((prev: Shift[]) => prev.map((s: Shift) => s.clinicTypeId === clinicId ? { ...s, clinicTypeId: undefined, title: `${getProviderById(s.providerId)?.name} @ N/A` } : s));
     addToast(`Clinic Type "${clinicName}" deleted and unassigned from shifts.`, 'success');
   };
 
@@ -454,19 +297,19 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setMedicalAssistants(prev => [...prev, newMA]);
+    setMedicalAssistants((prev: MedicalAssistant[]) => [...prev, newMA]);
     addToast(`Medical Assistant "${newMA.name}" added.`, 'success');
   };
 
   const updateMedicalAssistant = async (updatedMA: MedicalAssistant) => {
-    setMedicalAssistants(prev => prev.map(ma => ma.id === updatedMA.id ? { ...updatedMA, updatedAt: new Date().toISOString() } : ma));
+    setMedicalAssistants((prev: MedicalAssistant[]) => prev.map((ma: MedicalAssistant) => ma.id === updatedMA.id ? { ...updatedMA, updatedAt: new Date().toISOString() } : ma));
     addToast(`Medical Assistant "${updatedMA.name}" updated.`, 'success');
   };
 
   const deleteMedicalAssistant = async (maId: string) => {
-    const maName = medicalAssistants.find(ma => ma.id === maId)?.name || 'Unknown MA';
-    setMedicalAssistants(prev => prev.filter(ma => ma.id !== maId));
-    setShifts(prevShifts => prevShifts.map(s => ({
+    const maName = medicalAssistants.find((ma: MedicalAssistant) => ma.id === maId)?.name || 'Unknown MA';
+    setMedicalAssistants((prev: MedicalAssistant[]) => prev.filter((ma: MedicalAssistant) => ma.id !== maId));
+    setShifts((prevShifts: Shift[]) => prevShifts.map((s: Shift) => ({
         ...s,
         medicalAssistantIds: s.medicalAssistantIds?.filter(id => id !== maId)
     })));
@@ -524,7 +367,7 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
       updatedAt: new Date().toISOString(),
     };
 
-    await setShifts(prev => [...prev, newShift]);
+    setShifts((prev: Shift[]) => [...prev, newShift]);
     addToast(isCreatingException ? 'Shift exception created.' : 'Shift created.', 'success');
     return newShift;
   };
@@ -564,22 +407,22 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
         updatedAt: new Date().toISOString() 
     };
 
-    setShifts(prev => prev.map(s => (s.id === finalShift.id ? finalShift : s)));
+    setShifts((prev: Shift[]) => prev.map((s: Shift) => (s.id === finalShift.id ? finalShift : s)));
     addToast('Shift updated.', 'success');
   };
 
-  const deleteShift = async (shiftId: string, seriesIdToDelete?: string, deleteAllOccurrences?: boolean, deleteInstanceDate?: string) => {
+  const deleteShift = async (shiftId: string, seriesIdToDelete?: string, deleteAllOccurrences?: boolean) => {
     const shiftToDelete = getShiftById(shiftId);
     if (!shiftToDelete) { addToast("Shift not found to delete.", "error"); return; }
 
     if (deleteAllOccurrences && seriesIdToDelete) {
-        setShifts(prev => prev.filter(s => s.seriesId !== seriesIdToDelete && s.id !== seriesIdToDelete)); // also remove the base shift
+        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.seriesId !== seriesIdToDelete && s.id !== seriesIdToDelete)); // also remove the base shift
         addToast(`Recurring series and all its occurrences/exceptions deleted.`, 'success');
     } else if (shiftToDelete.isExceptionInstance) {
-        setShifts(prev => prev.filter(s => s.id !== shiftId));
+        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId));
         addToast(`Shift exception for ${shiftToDelete.exceptionForDate} deleted.`, 'success');
     } else { 
-        setShifts(prev => prev.filter(s => s.id !== shiftId)); 
+        setShifts((prev: Shift[]) => prev.filter((s: Shift) => s.id !== shiftId)); 
         addToast(`Shift "${shiftToDelete.title || shiftId}" deleted.`, 'success');
     }
   };
@@ -1047,7 +890,7 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
         onDragEnd={handleDragEnd}
       >
         <AppContext.Provider value={appContextValue}>
-          <AuthContext.Provider value={{ currentUser, isAuthenticated, login, logout, setCurrentUserRole, isAdmin }}>
+          <AuthContext.Provider value={{ currentUser, isAuthenticated, login: authenticateAdmin, logout, setCurrentUserRole, isAdmin }}>
            <SettingsContext.Provider value={settingsContextValue}>
             <ModalContext.Provider value={{ modal: modalState, openModal, closeModal }}>
               <ToastContext.Provider value={{ addToast }}>
@@ -1066,8 +909,7 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
                       centralDateDisplay={centralDateDisplay}
                       onNavigateToday={handleNavigateToday} 
                       onExportData={handleExportData}
-                      isSuperAdmin={isSuperAdmin}
-                      onOpenUserManagement={() => setShowUserManagement(true)}
+                      isSuperAdmin={false}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
@@ -1137,15 +979,12 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
                 {modalState.type === 'CONFIRMATION_MODAL' && <ConfirmationModal {...modalState.props} onCancel={closeModal} />}
                 {modalState.type === 'EXPORT_OPTIONS_MODAL' && <ExportOptionsModal {...modalState.props} isSubmitting={isSubmitting} onClose={closeModal} />}
                 {modalState.type === 'PDF_EXPORT_SETUP_MODAL' && <PdfExportSetupModal {...modalState.props} onClose={closeModal} />}
-                {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
-                {modalState.type === 'SUPABASE_LOGIN_FORM' && <SupabaseLoginForm {...modalState.props} />}
-                {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
+                {modalState.type === 'LOGIN_FORM' && <AdminPasswordForm {...modalState.props} />}
+                {modalState.type === 'SUPABASE_LOGIN_FORM' && <AdminPasswordForm {...modalState.props} />}
+                {modalState.type === 'SUPABASE_TEST' && <AdminPasswordForm {...modalState.props} />}
+                {modalState.type === 'adminPassword' && <AdminPasswordForm {...modalState.props} />}
               </Modal>
               
-              {/* User Management Modal - outside regular modal system */}
-              {showUserManagement && isSuperAdmin && (
-                <UserManagementDashboard onClose={() => setShowUserManagement(false)} />
-              )}
               <ToastContainer toasts={toasts} dismissToast={dismissToast} />
               
               <DragOverlay dropAnimation={null}>
@@ -1179,20 +1018,9 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, 
   );
 };
 
-// Main App component that provides Supabase context
+// Main App component
 const App: React.FC = () => {
-  const isSupabaseEnabled = isSupabaseConfigured();
-  
-  if (isSupabaseEnabled) {
-    return (
-      <SupabaseAuthProvider>
-        <AuthenticatedApp />
-      </SupabaseAuthProvider>
-    );
-  }
-  
-  // Fallback to demo mode without Supabase
-  return <AuthenticatedApp />;
+  return <MainApplication />;
 };
 
 export default App;
