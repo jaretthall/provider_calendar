@@ -242,43 +242,50 @@ export const testSupabaseConnection = async () => {
   }
 
   try {
-    // Test basic connection using a simple health check
-    // This doesn't require any specific tables to exist
-    const { data, error } = await supabase!.rpc('ping');
+    // Test database connection by checking if we can access the providers table
+    // This verifies both auth and database connectivity
+    const { data, error } = await supabase!
+      .from('providers')
+      .select('id')
+      .limit(1);
     
-    // If RPC doesn't exist, try a simple auth check instead
-    if (error && error.code === 'PGRST202') {
-      // Function not found - try auth check instead
-      const { error: authError } = await supabase!.auth.getSession();
-      
-      if (authError && authError.message?.includes('Invalid API key')) {
+    if (error) {
+      // If we get an auth error, the API key or URL is wrong
+      if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
         return {
           success: false,
-          error: 'Invalid Supabase API key',
-          details: authError
+          error: 'Invalid Supabase API key - check your .env file',
+          details: error
         };
       }
       
-      // If we get here, basic connection is working
-      return {
-        success: true,
-        message: 'Supabase connection successful (basic connectivity verified)',
-        note: 'Database tables may need to be set up'
-      };
-    }
-    
-    if (error) {
+      // If table doesn't exist, the schema hasn't been set up
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return {
+          success: false,
+          error: 'Database tables not found - please run the schema setup in Supabase SQL Editor',
+          details: error,
+          solution: 'Copy and paste the contents of supabase-schema.sql into your Supabase SQL Editor and run it'
+        };
+      }
+      
+      // Other database errors
       return {
         success: false,
-        error: error.message,
+        error: `Database error: ${error.message}`,
         details: error
       };
     }
 
+    // If we get here, everything is working perfectly
     return {
       success: true,
-      message: 'Supabase connection successful',
-      data
+      message: 'Supabase connection and database access verified',
+      details: {
+        tablesAccessible: true,
+        recordsFound: data?.length || 0,
+        projectId: supabaseUrl.replace(/^https?:\/\/([^.]+)\..*/, '$1')
+      }
     };
   } catch (error: any) {
     // If we get a network error or similar, the configuration might be wrong
