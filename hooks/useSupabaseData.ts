@@ -115,14 +115,23 @@ export function useSupabaseData<T>(
       ? (newData as (prev: T) => T)(isOnline ? supabaseData : localData)
       : newData;
 
+    console.log('🔄 updateData called:', {
+      isOnline,
+      supabaseTable,
+      currentUser: !!currentUser,
+      currentUserEmail: currentUser?.email
+    });
+
     if (isOnline && supabaseTable && currentUser) {
       try {
         setLoading(true);
         setError(null);
+        console.log(`💾 Writing to Supabase table: ${supabaseTable}`);
 
         // Transform and sync to Supabase (authenticated writes only)
         if (transformToSupabase) {
           const supabaseItems = transformToSupabase(dataToSet);
+          console.log(`📝 Writing ${supabaseItems.length} items to ${supabaseTable}`);
           
           // For anonymous reads/authenticated writes, we don't need user-specific data
           // Clear existing data and insert new data
@@ -132,23 +141,32 @@ export function useSupabaseData<T>(
             .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all existing records
 
           if (supabaseItems.length > 0) {
-            await supabase
+            const { error: insertError } = await supabase
               .from(supabaseTable)
               .insert(supabaseItems);
+            
+            if (insertError) {
+              console.error('❌ Supabase insert error:', insertError);
+              throw insertError;
+            }
           }
         }
 
         setSupabaseData(dataToSet);
+        console.log(`✅ Successfully wrote to ${supabaseTable}`);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update data');
-        console.error('Error updating Supabase:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
+        setError(errorMessage);
+        console.error('❌ Error updating Supabase:', err);
+        console.log('⚠️ Falling back to localStorage due to error');
+        setLocalData(dataToSet); // Fallback to localStorage on error
         throw err;
       } finally {
         setLoading(false);
       }
     } else if (!currentUser && isOnline) {
-      // Not authenticated but Supabase is online - this should not happen for writes
-      // Let Supabase handle the authentication via RLS policies
+      console.log('⚠️ Not authenticated but online - attempting Supabase write anyway');
+      // Not authenticated but Supabase is online - let RLS handle it
       try {
         setLoading(true);
         setError(null);
@@ -163,22 +181,31 @@ export function useSupabaseData<T>(
             .neq('id', '00000000-0000-0000-0000-000000000000');
 
           if (supabaseItems.length > 0) {
-            await supabase
+            const { error: insertError } = await supabase
               .from(supabaseTable!)
               .insert(supabaseItems);
+            
+            if (insertError) {
+              console.error('❌ Supabase insert error (unauthenticated):', insertError);
+              throw insertError;
+            }
           }
         }
 
         setSupabaseData(dataToSet);
+        console.log(`✅ Successfully wrote to ${supabaseTable} (unauthenticated)`);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Authentication required to make changes');
-        console.error('Authentication required for edit operation:', err);
+        console.error('❌ Authentication required for edit operation:', err);
+        console.log('⚠️ Falling back to localStorage due to auth error');
+        setLocalData(dataToSet); // Fallback to localStorage on auth error
         throw new Error('Please sign in to make changes');
       } finally {
         setLoading(false);
       }
     } else {
-      // Fallback to localStorage when offline
+      // Fallback to localStorage when offline or other conditions not met
+      console.log('💾 Writing to localStorage (offline mode)');
       setLocalData(dataToSet);
     }
   }, [isOnline, supabaseTable, currentUser, supabaseData, localData, transformToSupabase, setLocalData]);
