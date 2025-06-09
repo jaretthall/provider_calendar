@@ -84,81 +84,113 @@ const ADMIN_PASSWORD = 'CPS2025!Admin';
 
 // Main application component
 const MainApplication: React.FC = () => {
-  // Use Supabase for data storage with authentication
+  // Track Supabase connection and authentication status
+  const [supabaseConnectionStatus, setSupabaseConnectionStatus] = useState<boolean>(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(true);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [showSupabaseLogin, setShowSupabaseLogin] = useState<boolean>(false);
+
+  // Use Supabase for all data (anonymous reads, authenticated writes)
   const { 
     data: providers, 
     setData: setProviders, 
-    isOnline: providersOnline 
+    isOnline: providersOnline,
+    loading: providersLoading,
+    error: providersError
   } = useSupabaseProviders(INITIAL_PROVIDERS);
   
   const { 
     data: clinics, 
     setData: setClinics, 
-    isOnline: clinicsOnline 
+    isOnline: clinicsOnline,
+    loading: clinicsLoading,
+    error: clinicsError
   } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
   
   const { 
     data: medicalAssistants, 
     setData: setMedicalAssistants, 
-    isOnline: medicalAssistantsOnline 
+    isOnline: medicalAssistantsOnline,
+    loading: medicalAssistantsLoading,
+    error: medicalAssistantsError
   } = useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
   
   const { 
     data: shifts, 
     setData: setShifts, 
-    isOnline: shiftsOnline 
+    isOnline: shiftsOnline,
+    loading: shiftsLoading,
+    error: shiftsError
   } = useSupabaseShifts(INITIAL_SHIFTS);
   
-  // Track Supabase connection and authentication status
-  const [supabaseConnectionStatus, setSupabaseConnectionStatus] = useState<boolean>(false);
-  const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(true);
-  const [supabaseUser, setSupabaseUser] = useState<any>(null);
-  const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(true);
-  
-  // Test Supabase connection and set up auth on mount
+  // Test Supabase connection on mount (but don't require authentication)
   useEffect(() => {
     const initializeSupabase = async () => {
-      if (isSupabaseConfigured()) {
-        try {
-          // Test connection
-          const result = await testSupabaseConnection();
+      console.log('🔍 Testing Supabase connection...');
+      
+      try {
+        if (isSupabaseConfigured()) {
+          console.log('🔧 Supabase is configured, testing connection...');
+          
+          // Test connection with timeout
+          const connectionPromise = testSupabaseConnection();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection test timeout')), 10000)
+          );
+          
+          const result = await Promise.race([connectionPromise, timeoutPromise]) as any;
           setSupabaseConnectionStatus(result.success);
+          
           if (result.success) {
             console.log('✅ Supabase connection successful:', result.message);
             console.log('📊 Connection details:', result.details);
+            
+            // Set up auth listener for when user logs in later
+            if (supabase) {
+              const { data: { subscription } } = supabase.auth.onAuthStateChange(
+                (_event, session) => {
+                  console.log('🔄 Auth state changed:', _event, session?.user ? 'User found' : 'No user');
+                  setSupabaseUser(session?.user || null);
+                }
+              );
+
+              // Cleanup function
+              return () => {
+                console.log('🧹 Cleaning up auth subscription');
+                subscription.unsubscribe();
+              };
+            }
           } else {
             console.warn('❌ Supabase connection failed:', result.error);
             if (result.solution) {
               console.info('💡 Solution:', result.solution);
             }
           }
-
-          // Check for existing session
-          if (supabase) {
-            const { data: { session } } = await supabase.auth.getSession();
-            setSupabaseUser(session?.user || null);
-
-            // Listen for auth changes
-            const { data: { subscription } } = supabase.auth.onAuthStateChange(
-              (_event, session) => {
-                setSupabaseUser(session?.user || null);
-              }
-            );
-
-            return () => subscription.unsubscribe();
-          }
-        } catch (error) {
-          console.warn('Supabase initialization error:', error);
+        } else {
+          console.log('⚙️ Supabase not configured, using localStorage mode');
           setSupabaseConnectionStatus(false);
         }
-      } else {
+      } catch (error) {
+        console.error('❌ Supabase initialization error:', error);
         setSupabaseConnectionStatus(false);
+      } finally {
+        console.log('✅ Supabase connection test complete');
+        setIsCheckingConnection(false);
       }
-      setIsCheckingConnection(false);
-      setSupabaseAuthLoading(false);
     };
 
     initializeSupabase();
+
+    // Fallback: Force loading to complete after 15 seconds
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('⏰ Supabase initialization taking too long, forcing completion');
+      setIsCheckingConnection(false);
+      setSupabaseConnectionStatus(false);
+    }, 10000);
+
+    return () => {
+      clearTimeout(fallbackTimeout);
+    };
   }, []);
   
   // Use actual Supabase data storage status 
@@ -971,23 +1003,27 @@ const MainApplication: React.FC = () => {
     }
   };
 
-  // Show authentication screen if Supabase is configured but user not logged in
-  if (isSupabaseConfigured() && !supabaseAuthLoading && !supabaseUser) {
+  // Show Supabase authentication modal when requested
+  if (showSupabaseLogin) {
     return (
       <SupabaseAuth onSuccess={() => {
         console.log('Authentication successful');
         addToast('Successfully logged in with Supabase!', 'success');
+        setShowSupabaseLogin(false);
       }} />
     );
   }
 
-  // Show loading screen while checking auth
-  if (supabaseAuthLoading) {
+  // Show loading screen while checking connection
+  if (isCheckingConnection) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Testing Supabase connection...</p>
+          <p className="mt-2 text-sm text-gray-500">
+            Checking database availability
+          </p>
         </div>
       </div>
     );
@@ -1023,6 +1059,7 @@ const MainApplication: React.FC = () => {
                       isSuperAdmin={false}
                       supabaseUser={supabaseUser}
                       onSupabaseLogout={handleSupabaseLogout}
+                      onSupabaseLogin={() => setShowSupabaseLogin(true)}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">

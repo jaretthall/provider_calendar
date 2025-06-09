@@ -31,8 +31,14 @@ export function useSupabaseData<T>(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
 
-  const isOnline = isSupabaseConfigured();
+  // Check if Supabase is temporarily disabled (emergency fix)
+  const isSupabaseDisabled = localStorage.getItem('tempoSupabaseDisabled') === 'true';
+  const isOnline = !isSupabaseDisabled && isSupabaseConfigured();
+  const MAX_RETRIES = 3;
+  const MIN_RETRY_DELAY = 2000; // 2 seconds minimum between retries
 
   // Get current user
   useEffect(() => {
@@ -57,31 +63,51 @@ export function useSupabaseData<T>(
     return () => subscription?.unsubscribe();
   }, [isOnline]);
 
-  // Fetch data from Supabase
+  // Fetch data from Supabase (no authentication required for reads)
   const fetchFromSupabase = useCallback(async () => {
-    if (!isOnline || !supabaseTable || !currentUser) return;
+    if (!isOnline || !supabaseTable) return;
+
+    // Prevent too frequent retries
+    const now = Date.now();
+    if (now - lastFetchTime < MIN_RETRY_DELAY && retryCount > 0) {
+      console.log('⏳ Skipping fetch - too soon after last attempt');
+      return;
+    }
+
+    // Stop retrying after max attempts
+    if (retryCount >= MAX_RETRIES) {
+      console.error('🚫 Max retries reached, switching to localStorage');
+      setError('Connection failed - using offline mode');
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
+      setLastFetchTime(now);
 
+      console.log(`🔄 Fetching ${supabaseTable} (attempt ${retryCount + 1}/${MAX_RETRIES})`);
       const data = await dbHelpers.getAll(supabaseTable, 'created_at');
       const transformedData = transformFromSupabase ? transformFromSupabase(data) : data as T;
       setSupabaseData(transformedData);
+      setRetryCount(0); // Reset retry count on success
+      console.log(`✅ Successfully fetched ${supabaseTable}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      console.error('Error fetching from Supabase:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
+      setError(errorMessage);
+      setRetryCount(prev => prev + 1);
+      console.error(`❌ Error fetching ${supabaseTable}:`, errorMessage, `(attempt ${retryCount + 1})`);
     } finally {
       setLoading(false);
     }
-  }, [isOnline, supabaseTable, currentUser, transformFromSupabase]);
+  }, [isOnline, supabaseTable, transformFromSupabase, retryCount, lastFetchTime, MAX_RETRIES, MIN_RETRY_DELAY]);
 
-  // Initial data fetch
+  // Initial data fetch (no authentication required)
   useEffect(() => {
-    if (isOnline && currentUser) {
+    if (isOnline && retryCount < MAX_RETRIES) {
       fetchFromSupabase();
     }
-  }, [fetchFromSupabase, isOnline, currentUser]);
+  }, [isOnline, retryCount, MAX_RETRIES]); // Removed fetchFromSupabase to prevent infinite loops
 
   // Update data function
   const updateData = useCallback(async (newData: T | ((prev: T) => T)) => {
@@ -94,25 +120,21 @@ export function useSupabaseData<T>(
         setLoading(true);
         setError(null);
 
-        // Transform and sync to Supabase
+        // Transform and sync to Supabase (authenticated writes only)
         if (transformToSupabase) {
           const supabaseItems = transformToSupabase(dataToSet);
           
-          // Clear existing user data and insert new data
+          // For anonymous reads/authenticated writes, we don't need user-specific data
+          // Clear existing data and insert new data
           await supabase
             .from(supabaseTable)
             .delete()
-            .eq('user_id', currentUser.id);
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all existing records
 
           if (supabaseItems.length > 0) {
-            const itemsWithUserId = supabaseItems.map(item => ({
-              ...item,
-              user_id: currentUser.id
-            }));
-
             await supabase
               .from(supabaseTable)
-              .insert(itemsWithUserId);
+              .insert(supabaseItems);
           }
         }
 
@@ -124,19 +146,44 @@ export function useSupabaseData<T>(
       } finally {
         setLoading(false);
       }
+    } else if (!currentUser && isOnline) {
+      // Not authenticated - show error
+      throw new Error('Authentication required to make changes');
     } else {
-      // Fallback to localStorage
+      // Fallback to localStorage when offline
       setLocalData(dataToSet);
     }
   }, [isOnline, supabaseTable, currentUser, supabaseData, localData, transformToSupabase, setLocalData]);
 
+  // Reset retry count after some time
+  useEffect(() => {
+    if (retryCount >= MAX_RETRIES) {
+      const resetTimeout = setTimeout(() => {
+        console.log('🔄 Resetting retry count for', supabaseTable);
+        setRetryCount(0);
+        setError(null);
+      }, 30000); // Reset after 30 seconds
+
+      return () => clearTimeout(resetTimeout);
+    }
+  }, [retryCount, MAX_RETRIES, supabaseTable]);
+
+  // Determine if we should use Supabase data or localStorage
+  const shouldUseSupabase = isOnline && retryCount < MAX_RETRIES && !error;
+  const effectiveData = shouldUseSupabase ? supabaseData : localData;
+  const effectiveIsOnline = shouldUseSupabase;
+
   return {
-    data: isOnline ? supabaseData : localData,
+    data: effectiveData,
     setData: updateData,
     loading,
     error,
-    refetch: fetchFromSupabase,
-    isOnline
+         refetch: async () => {
+       setRetryCount(0);
+       setError(null);
+       await fetchFromSupabase();
+     },
+    isOnline: effectiveIsOnline
   };
 }
 

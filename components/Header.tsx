@@ -18,6 +18,7 @@ interface HeaderProps {
   isSuperAdmin?: boolean;
   supabaseUser?: any;
   onSupabaseLogout?: () => Promise<any>;
+  onSupabaseLogin?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -29,7 +30,8 @@ const Header: React.FC<HeaderProps> = ({
   onExportData,
   isSuperAdmin = false,
   supabaseUser,
-  onSupabaseLogout
+  onSupabaseLogout,
+  onSupabaseLogin
 }) => {
   const authContext = useContext(AuthContext);
   const modalContext = useContext(ModalContext);
@@ -158,7 +160,14 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           ) : (
             <button
-              onClick={() => openModal('LOGIN_FORM')}
+              onClick={() => {
+                // Use Supabase login if configured, otherwise use password login
+                if (onSupabaseLogin) {
+                  onSupabaseLogin();
+                } else {
+                  openModal('LOGIN_FORM');
+                }
+              }}
               className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
               title="Sign in to manage schedules"
             >
