@@ -16,6 +16,8 @@ interface HeaderProps {
   onNavigateToday: () => void;
   onExportData: () => void;
   isSuperAdmin?: boolean;
+  supabaseUser?: any;
+  onSupabaseLogout?: () => Promise<any>;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -25,7 +27,9 @@ const Header: React.FC<HeaderProps> = ({
   centralDateDisplay,
   onNavigateToday, 
   onExportData,
-  isSuperAdmin = false
+  isSuperAdmin = false,
+  supabaseUser,
+  onSupabaseLogout
 }) => {
   const authContext = useContext(AuthContext);
   const modalContext = useContext(ModalContext);
@@ -128,7 +132,19 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {isAuthenticated ? (
+          {supabaseUser ? (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+                {supabaseUser.email}
+              </span>
+              <button
+                onClick={onSupabaseLogout}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : isAuthenticated ? (
             <div className="flex items-center space-x-2">
               <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
                 Admin ({currentUser?.username})

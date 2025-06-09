@@ -30,6 +30,7 @@ import SettingsForm from './components/SettingsForm';
 import ExportOptionsModal from './components/ExportOptionsModal';
 import PdfExportSetupModal from './components/PdfExportSetupModal';
 import AdminPasswordForm from './components/AdminPasswordForm';
+import SupabaseAuth from './components/SupabaseAuth';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import { ToastContainer } from './components/Toast';
@@ -50,7 +51,7 @@ import {
   useSupabaseMedicalAssistants, 
   useSupabaseShifts
 } from './hooks/useSupabaseData';
-import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
+import { isSupabaseConfigured, testSupabaseConnection, supabase } from './utils/supabase';
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
@@ -83,7 +84,7 @@ const ADMIN_PASSWORD = 'CPS2025!Admin';
 
 // Main application component
 const MainApplication: React.FC = () => {
-  // Use Supabase for data storage when connected, localStorage as fallback
+  // Use Supabase for data storage with authentication
   const { 
     data: providers, 
     setData: setProviders, 
@@ -108,15 +109,18 @@ const MainApplication: React.FC = () => {
     isOnline: shiftsOnline 
   } = useSupabaseShifts(INITIAL_SHIFTS);
   
-  // Track Supabase connection status
+  // Track Supabase connection and authentication status
   const [supabaseConnectionStatus, setSupabaseConnectionStatus] = useState<boolean>(false);
   const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(true);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [supabaseAuthLoading, setSupabaseAuthLoading] = useState<boolean>(true);
   
-  // Test Supabase connection on mount
+  // Test Supabase connection and set up auth on mount
   useEffect(() => {
-    const checkConnection = async () => {
+    const initializeSupabase = async () => {
       if (isSupabaseConfigured()) {
         try {
+          // Test connection
           const result = await testSupabaseConnection();
           setSupabaseConnectionStatus(result.success);
           if (result.success) {
@@ -128,20 +132,36 @@ const MainApplication: React.FC = () => {
               console.info('💡 Solution:', result.solution);
             }
           }
+
+          // Check for existing session
+          if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession();
+            setSupabaseUser(session?.user || null);
+
+            // Listen for auth changes
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(
+              (_event, session) => {
+                setSupabaseUser(session?.user || null);
+              }
+            );
+
+            return () => subscription.unsubscribe();
+          }
         } catch (error) {
-          console.warn('Supabase connection test error:', error);
+          console.warn('Supabase initialization error:', error);
           setSupabaseConnectionStatus(false);
         }
       } else {
         setSupabaseConnectionStatus(false);
       }
       setIsCheckingConnection(false);
+      setSupabaseAuthLoading(false);
     };
 
-    checkConnection();
+    initializeSupabase();
   }, []);
   
-  // Use actual Supabase data storage status for online indicator
+  // Use actual Supabase data storage status 
   const isFullyOnline = providersOnline && clinicsOnline && medicalAssistantsOnline && shiftsOnline;
   
   // User settings and auth use localStorage
@@ -943,15 +963,43 @@ const MainApplication: React.FC = () => {
     updateSettings,
   };
 
+  // Handle Supabase logout
+  const handleSupabaseLogout = async () => {
+    if (supabase && supabase.auth) {
+      await supabase.auth.signOut();
+      addToast('Logged out successfully', 'success');
+    }
+  };
+
+  // Show authentication screen if Supabase is configured but user not logged in
+  if (isSupabaseConfigured() && !supabaseAuthLoading && !supabaseUser) {
+    return (
+      <SupabaseAuth onSuccess={() => {
+        console.log('Authentication successful');
+        addToast('Successfully logged in with Supabase!', 'success');
+      }} />
+    );
+  }
+
+  // Show loading screen while checking auth
+  if (supabaseAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <ErrorBoundary>
-      <DndContext 
-        sensors={sensors} 
-        collisionDetection={closestCenter} 
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
+    <DndContext 
+      sensors={sensors} 
+      collisionDetection={closestCenter} 
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
         <AppContext.Provider value={appContextValue}>
           <AuthContext.Provider value={{ currentUser, isAuthenticated, login: authenticateAdmin, logout, setCurrentUserRole, isAdmin }}>
            <SettingsContext.Provider value={settingsContextValue}>
@@ -973,6 +1021,8 @@ const MainApplication: React.FC = () => {
                       onNavigateToday={handleNavigateToday} 
                       onExportData={handleExportData}
                       isSuperAdmin={false}
+                      supabaseUser={supabaseUser}
+                      onSupabaseLogout={handleSupabaseLogout}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
@@ -1077,13 +1127,16 @@ const MainApplication: React.FC = () => {
         </AuthContext.Provider>
       </AppContext.Provider>
     </DndContext>
-    </ErrorBoundary>
   );
 };
 
 // Main App component
 const App: React.FC = () => {
-  return <MainApplication />;
+  return (
+    <ErrorBoundary>
+      <MainApplication />
+    </ErrorBoundary>
+  );
 };
 
 export default App;
