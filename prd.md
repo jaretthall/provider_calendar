@@ -133,11 +133,27 @@ Users who need to view their assignments with specific providers or shifts.
 
 ### 4.5. User Roles & Permissions
 
-#### Administrator
-Full access to all features, including creating/editing/deleting all data (Providers, Clinics, MAs, Shifts), managing settings, and importing/exporting data. Can perform drag-and-drop operations.
+#### Anonymous Users (Not Signed In)
+- ✅ **READ-ONLY ACCESS**: Can view all schedules, providers, clinics, medical assistants, and shift data
+- ✅ **Calendar Navigation**: Can navigate between views (Month, Week, Day) and dates
+- ✅ **Filtering**: Can use all filtering options to view specific data
+- ✅ **Export**: Can export data to PDF (view-only export options)
+- ❌ **Import Restrictions**: Cannot access import functionality
+- ❌ **No Editing**: Cannot create, edit, or delete any data
+- ❌ **No Settings Access**: Cannot modify application settings
 
-#### User (Read-only)
-Can view schedules and data but cannot make changes. (This is primarily managed by UI controls disabling input for non-admins). The role can be switched via a dropdown in the header.
+#### Authenticated Users (Signed In)
+- ✅ **FULL ACCESS**: Complete read/write access to all features
+- ✅ **Data Management**: Can create, edit, delete providers, clinics, MAs, and shifts
+- ✅ **Import/Export**: Full access to import and export functionality
+- ✅ **Settings Management**: Can modify application settings
+- ✅ **Drag-and-Drop**: Can perform all drag-and-drop operations
+- ✅ **Advanced Features**: Access to all administrative functions
+
+#### Authentication Model
+- **No login required for viewing** - Users can immediately access and browse all schedule data
+- **Login only required for editing** - Authentication is only prompted when users attempt to create, edit, or import data
+- **Seamless transition** - Users can sign in at any time to gain editing privileges without losing their current view
 
 ### 4.6. Data Handling
 

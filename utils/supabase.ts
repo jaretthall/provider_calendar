@@ -106,6 +106,7 @@ export const dbHelpers = {
       throw new Error('Supabase not configured');
     }
     
+    console.log(`🔍 Fetching from table: ${table}, orderBy: ${orderBy}`);
     let query = supabase.from(table).select('*');
     
     if (orderBy) {
@@ -115,10 +116,16 @@ export const dbHelpers = {
     const { data, error } = await query;
     
     if (error) {
-      console.error(`Error fetching ${table}:`, error);
+      console.error(`❌ Error fetching ${table}:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
-    
+
+    console.log(`✅ Successfully fetched ${data?.length || 0} records from ${table}`);
     return data || [];
   },
 
