@@ -416,7 +416,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       )}
       <div>
         <label htmlFor="provider" className="block text-sm font-medium text-gray-700">Provider</label>
-        <select id="provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-100" required disabled={isSubmitting}>
+        <select id="provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" required disabled={isSubmitting}>
           <option value="" disabled>Select Provider</option>
           {activeProviders.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
         </select>
@@ -431,7 +431,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
         <>
           <div>
             <label htmlFor="clinicType" className="block text-sm font-medium text-gray-700">Clinic Type</label>
-            <select id="clinicType" value={clinicTypeId || ''} onChange={(e) => setClinicTypeId(e.target.value || undefined)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-100" required={!isVacation} disabled={isVacation || isSubmitting}>
+            <select id="clinicType" value={clinicTypeId || ''} onChange={(e) => setClinicTypeId(e.target.value || undefined)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" required={!isVacation} disabled={isVacation || isSubmitting}>
               <option value="" disabled>Select Clinic Type</option>
               {activeClinics.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
