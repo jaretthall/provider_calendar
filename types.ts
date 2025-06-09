@@ -111,7 +111,7 @@ export interface AppContextType {
 export interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  login: (password: string) => boolean;
   logout: () => void;
   setCurrentUserRole: (role: UserRole) => void;
   isAdmin: boolean;

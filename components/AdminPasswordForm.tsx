@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../App';
 
 interface AdminPasswordFormProps {
   onAuthenticate: () => void;
@@ -9,9 +10,13 @@ const AdminPasswordForm: React.FC<AdminPasswordFormProps> = ({ onAuthenticate, o
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const authContext = useContext(AuthContext);
 
-  // Simple admin password for the application
-  const ADMIN_PASSWORD = 'CPS2025!Admin';
+  if (!authContext) {
+    throw new Error('AuthContext not found');
+  }
+
+  const { login } = authContext;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +24,8 @@ const AdminPasswordForm: React.FC<AdminPasswordFormProps> = ({ onAuthenticate, o
     setIsSubmitting(true);
 
     try {
-      if (password === ADMIN_PASSWORD) {
+      const success = login(password);
+      if (success) {
         onAuthenticate();
       } else {
         setError('Invalid password. Please try again.');
