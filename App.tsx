@@ -128,7 +128,7 @@ const AuthenticatedApp: React.FC = () => {
 
 // User approval gate component for Supabase users
 const UserApprovalGate: React.FC = () => {
-  const { currentUserProfile, isApproved, loading, fetchCurrentUserProfile } = useUserManagement();
+  const { currentUserProfile, isApproved, loading, fetchCurrentUserProfile, error } = useUserManagement();
 
   // Show loading while checking user status
   if (loading) {
@@ -140,6 +140,12 @@ const UserApprovalGate: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // If there's an error loading the user profile, show guest mode with a note
+  if (error && !currentUserProfile) {
+    console.warn('User profile error, falling back to guest mode:', error);
+    return <MainApplication isGuestMode={true} showProfileError={true} />;
   }
 
   // If user is not approved, show pending approval screen
@@ -159,9 +165,10 @@ const UserApprovalGate: React.FC = () => {
 // Main application component (your existing App logic)
 interface MainApplicationProps {
   isGuestMode?: boolean;
+  showProfileError?: boolean;
 }
 
-const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false }) => {
+const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false, showProfileError = false }) => {
   // Use Supabase hooks with localStorage fallback
   const { data: providers, setData: setProviders, isOnline: providersOnline } = useSupabaseProviders(INITIAL_PROVIDERS);
   const { data: clinics, setData: setClinics, isOnline: clinicsOnline } = useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
@@ -204,8 +211,8 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false }
   useEffect(() => {
     setCalendarViewMode(userSettings.defaultCalendarView);
   }, [userSettings.defaultCalendarView]);
-  
-  const updateSettings = (newSettings: Partial<UserSettings>) => {
+
+    const updateSettings = (newSettings: Partial<UserSettings>) => {
     setUserSettings(prev => ({...prev, ...newSettings}));
     addToast('Settings updated successfully.', 'success');
   };
@@ -239,6 +246,17 @@ const MainApplication: React.FC<MainApplicationProps> = ({ isGuestMode = false }
   const dismissToast = (id: string) => {
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
   };
+
+  // Show profile error toast in guest mode
+  useEffect(() => {
+    if (showProfileError && isGuestMode) {
+      addToast(
+        'Running in read-only mode. Sign up or contact administrator to access editing features.',
+        'info',
+        6000
+      );
+    }
+  }, [showProfileError, isGuestMode, addToast]);
 
   const closeModal = () => setModalState({ type: null, props: {} });
 
