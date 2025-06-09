@@ -100,7 +100,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
     <div style="font-family: Arial, sans-serif; padding: 20px; font-size: 12px; line-height: 1.4;">
       <h1 style="text-align: center; margin-bottom: 30px; font-size: 18px; color: #333;">${title}</h1>
       <div style="margin-bottom: 20px; text-align: center; font-size: 10px; color: #666;">
-        Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+        Generated on ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })} at ${new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' })}
       </div>
   `;
 
@@ -130,7 +130,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
       html += `
         <tr style="border-bottom: 1px solid #dee2e6; ${vacationStyle}">
           <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
-            ${new Date(shift.startDate).toLocaleDateString()}${shift.startDate !== shift.endDate ? ` - ${new Date(shift.endDate).toLocaleDateString()}` : ''}
+            ${new Date(shift.startDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}${shift.startDate !== shift.endDate ? ` - ${new Date(shift.endDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` : ''}
           </td>
           <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${getProviderName(shift.providerId)}
@@ -276,7 +276,7 @@ export const generateCalendarPdf = async (
     });
 
     // Add title
-    const title = options.title || `Calendar View - ${new Date().toLocaleDateString()}`;
+    const title = options.title || `Calendar View - ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })}`;
     pdf.setFontSize(16);
     pdf.text(title, pageWidth / 2, 15, { align: 'center' });
 

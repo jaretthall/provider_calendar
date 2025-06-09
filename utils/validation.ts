@@ -170,11 +170,11 @@ export const validateDateWithRange = (
   }
   
   if (options?.minDate && dateObj < options.minDate) {
-    return { isValid: false, error: `${fieldName} cannot be before ${options.minDate.toLocaleDateString()}` };
+    return { isValid: false, error: `${fieldName} cannot be before ${options.minDate.toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` };
   }
   
   if (options?.maxDate && dateObj > options.maxDate) {
-    return { isValid: false, error: `${fieldName} cannot be after ${options.maxDate.toLocaleDateString()}` };
+    return { isValid: false, error: `${fieldName} cannot be after ${options.maxDate.toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` };
   }
   
   return { isValid: true };

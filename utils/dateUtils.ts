@@ -1,6 +1,64 @@
-
 import { MONTH_NAMES, DAYS_OF_WEEK } from '../constants';
 import { Shift, RecurringRule, RecurringFrequency } from '../types';
+
+// Timezone utilities for consistent Eastern Time handling
+const EASTERN_TIMEZONE = 'America/New_York';
+
+/**
+ * Get the current date in Eastern Time
+ */
+export const getCurrentDateInEasternTime = (): Date => {
+  const now = new Date();
+  const easternTime = new Date(now.toLocaleString("en-US", { timeZone: EASTERN_TIMEZONE }));
+  return easternTime;
+};
+
+/**
+ * Convert any date to Eastern Time
+ */
+export const convertToEasternTime = (date: Date): Date => {
+  return new Date(date.toLocaleString("en-US", { timeZone: EASTERN_TIMEZONE }));
+};
+
+/**
+ * Create a date in Eastern Time from date components
+ */
+export const createEasternDate = (year: number, month: number, day: number): Date => {
+  // Create date string in Eastern timezone
+  const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00`;
+  const utcDate = new Date(dateString);
+  return convertToEasternTime(utcDate);
+};
+
+/**
+ * Get today's date in Eastern Time (date only, no time)
+ */
+export const getTodayInEasternTime = (): Date => {
+  const now = getCurrentDateInEasternTime();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
+/**
+ * Format a date using Eastern Time locale
+ */
+export const formatDateInEasternTime = (date: Date, options?: Intl.DateTimeFormatOptions): string => {
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    timeZone: EASTERN_TIMEZONE,
+    ...options
+  };
+  return date.toLocaleDateString('en-US', defaultOptions);
+};
+
+/**
+ * Format a date and time using Eastern Time locale
+ */
+export const formatDateTimeInEasternTime = (date: Date, options?: Intl.DateTimeFormatOptions): string => {
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    timeZone: EASTERN_TIMEZONE,
+    ...options
+  };
+  return date.toLocaleString('en-US', defaultOptions);
+};
 
 export const getDaysInMonth = (year: number, month: number): Date[] => {
   const date = new Date(year, month, 1);

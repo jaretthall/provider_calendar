@@ -48,7 +48,8 @@ import {
 import useLocalStorage from './hooks/useLocalStorage';
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
-  getWeekRangeString, addDays as dateAddDays 
+  getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
+  formatDateInEasternTime 
 } from './utils/dateUtils';
 import { detectAllShiftConflicts } from './utils/conflictUtils';
 import ChevronLeftIcon from './components/icons/ChevronLeftIcon';
@@ -89,7 +90,7 @@ const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth >= 1024); 
   const [conflictingShiftIds, setConflictingShiftIds] = useState<Set<string>>(new Set());
   const [activeDragItem, setActiveDragItem] = useState<DraggableItemData | null>(null);
@@ -679,7 +680,7 @@ const App: React.FC = () => {
       return prev;
     });
   };
-  const handleNavigateToday = () => setCurrentDate(new Date());
+  const handleNavigateToday = () => setCurrentDate(getTodayInEasternTime());
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -896,11 +897,11 @@ const App: React.FC = () => {
     ? getMonthYearString(currentDate) 
     : calendarViewMode === 'week'
     ? getWeekRangeString(currentDate, userSettings.weekStartsOn)
-    : currentDate.toLocaleDateString(undefined, { 
+    : formatDateInEasternTime(currentDate, { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
-        day: 'numeric' 
+        day: 'numeric'
       });
 
   const appContextValue: AppContextType = {
