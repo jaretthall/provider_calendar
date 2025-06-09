@@ -50,6 +50,7 @@ import {
   useSupabaseMedicalAssistants, 
   useSupabaseShifts
 } from './hooks/useSupabaseData';
+import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
@@ -88,14 +89,35 @@ const MainApplication: React.FC = () => {
   const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMedicalAssistants', INITIAL_MEDICAL_ASSISTANTS);
   const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
   
-  // Check Supabase configuration status
-  const isSupabaseConfigured = Boolean(
-    import.meta.env.VITE_SUPABASE_URL && 
-    import.meta.env.VITE_SUPABASE_ANON_KEY
-  );
+  // Track Supabase connection status
+  const [supabaseConnectionStatus, setSupabaseConnectionStatus] = useState<boolean>(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(true);
   
-  // For now, we're using localStorage. Supabase integration can be enabled by setting environment variables
-  const isFullyOnline = false; // Will be true when Supabase is properly configured
+  // Test Supabase connection on mount
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (isSupabaseConfigured()) {
+        try {
+          const result = await testSupabaseConnection();
+          setSupabaseConnectionStatus(result.success);
+          if (!result.success) {
+            console.warn('Supabase connection test failed:', result.error);
+          }
+        } catch (error) {
+          console.warn('Supabase connection test error:', error);
+          setSupabaseConnectionStatus(false);
+        }
+      } else {
+        setSupabaseConnectionStatus(false);
+      }
+      setIsCheckingConnection(false);
+    };
+
+    checkConnection();
+  }, []);
+  
+  // Use actual Supabase connection status for online indicator
+  const isFullyOnline = supabaseConnectionStatus;
   
   // User settings and auth use localStorage
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
@@ -979,7 +1001,7 @@ const MainApplication: React.FC = () => {
                       )}
                     </div>
                   </main>
-                  <Footer isOnline={isFullyOnline} />
+                  <Footer isOnline={isFullyOnline} isCheckingConnection={isCheckingConnection} />
                 </div>
               </div>
 
