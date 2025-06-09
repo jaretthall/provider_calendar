@@ -147,8 +147,36 @@ export function useSupabaseData<T>(
         setLoading(false);
       }
     } else if (!currentUser && isOnline) {
-      // Not authenticated - show error
-      throw new Error('Authentication required to make changes');
+      // Not authenticated but Supabase is online - this should not happen for writes
+      // Let Supabase handle the authentication via RLS policies
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (transformToSupabase) {
+          const supabaseItems = transformToSupabase(dataToSet);
+          
+          // Clear existing data and insert new data
+          await supabase
+            .from(supabaseTable!)
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000');
+
+          if (supabaseItems.length > 0) {
+            await supabase
+              .from(supabaseTable!)
+              .insert(supabaseItems);
+          }
+        }
+
+        setSupabaseData(dataToSet);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Authentication required to make changes');
+        console.error('Authentication required for edit operation:', err);
+        throw new Error('Please sign in to make changes');
+      } finally {
+        setLoading(false);
+      }
     } else {
       // Fallback to localStorage when offline
       setLocalData(dataToSet);

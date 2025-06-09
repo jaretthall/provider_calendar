@@ -196,14 +196,20 @@ const MainApplication: React.FC = () => {
   // Use actual Supabase data storage status 
   const isFullyOnline = providersOnline && clinicsOnline && medicalAssistantsOnline && shiftsOnline;
   
-  // User settings and auth use localStorage
+  // User settings use localStorage, but auth now uses Supabase
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
+  
+  // Keep old system for fallback/compatibility but use Supabase auth as primary
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', { 
     id: 'default-user', 
     username: 'User', 
     role: UserRole.USER 
   });
   const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
+  
+  // Use Supabase authentication status as primary
+  const isUserAuthenticated = !!supabaseUser || isAuthenticated;
+  const isUserAdmin = !!supabaseUser || isAuthenticated;
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
@@ -220,7 +226,8 @@ const MainApplication: React.FC = () => {
     showVacations: true,
   });
 
-  const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
+  // Use Supabase authentication status as primary, fallback to localStorage
+  const isAdmin = isUserAdmin;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -270,8 +277,8 @@ const MainApplication: React.FC = () => {
   const closeModal = () => setModalState({ type: null, props: {} });
 
   const openModal = (type: ModalState['type'], props?: any) => {
-    // Check if admin action requires password
-    const adminActions = [
+    // Check if this is an edit action that requires authentication
+    const editActions = [
       'addProvider', 'editProvider', 'deleteProvider',
       'addClinicType', 'editClinicType', 'deleteClinicType', 
       'addMedicalAssistant', 'editMedicalAssistant', 'deleteMedicalAssistant',
@@ -279,16 +286,9 @@ const MainApplication: React.FC = () => {
       'importData', 'settings'
     ];
 
-    if (adminActions.includes(type as string) && !isAdmin) {
-      setModalState({
-        type: 'adminPassword',
-        props: {
-          onAuthenticate: () => {
-            closeModal();
-            setModalState({ type, props });
-          }
-        }
-      });
+    if (editActions.includes(type as string) && !supabaseUser) {
+      // Prompt for Supabase login instead of password
+      setShowSupabaseLogin(true);
       return;
     }
 
@@ -1037,7 +1037,7 @@ const MainApplication: React.FC = () => {
       onDragEnd={handleDragEnd}
     >
         <AppContext.Provider value={appContextValue}>
-          <AuthContext.Provider value={{ currentUser, isAuthenticated, login: authenticateAdmin, logout, setCurrentUserRole, isAdmin }}>
+          <AuthContext.Provider value={{ currentUser: supabaseUser || currentUser, isAuthenticated: isUserAuthenticated, login: authenticateAdmin, logout, setCurrentUserRole, isAdmin }}>
            <SettingsContext.Provider value={settingsContextValue}>
             <ModalContext.Provider value={{ modal: modalState, openModal, closeModal }}>
               <ToastContext.Provider value={{ addToast }}>
