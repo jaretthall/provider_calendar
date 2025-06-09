@@ -56,7 +56,7 @@ export function useSupabaseData<T>(
     getCurrentUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = authHelpers.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = authHelpers.onAuthStateChange((_event: any, session: any) => {
       setCurrentUser(session?.user || null);
     });
 
@@ -107,9 +107,9 @@ export function useSupabaseData<T>(
     if (isOnline && retryCount < MAX_RETRIES) {
       fetchFromSupabase();
     }
-  }, [isOnline, retryCount, MAX_RETRIES]); // Removed fetchFromSupabase to prevent infinite loops
+  }, [isOnline, retryCount, MAX_RETRIES]);
 
-  // Update data function
+  // Update data function - simplified for single user
   const updateData = useCallback(async (newData: T | ((prev: T) => T)) => {
     const dataToSet = typeof newData === 'function' 
       ? (newData as (prev: T) => T)(isOnline ? supabaseData : localData)
@@ -129,16 +129,16 @@ export function useSupabaseData<T>(
         console.log(`💾 Writing to Supabase table: ${supabaseTable}`);
 
         // Transform and sync to Supabase (authenticated writes only)
+        // No user_id needed for single-user approach
         if (transformToSupabase) {
           const supabaseItems = transformToSupabase(dataToSet);
           console.log(`📝 Writing ${supabaseItems.length} items to ${supabaseTable}`);
           
-          // For anonymous reads/authenticated writes, we don't need user-specific data
-          // Clear existing data and insert new data
+          // Clear all existing data and insert new data (single user owns all data)
           await supabase
             .from(supabaseTable)
             .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all existing records
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
 
           if (supabaseItems.length > 0) {
             const { error: insertError } = await supabase
@@ -165,44 +165,10 @@ export function useSupabaseData<T>(
         setLoading(false);
       }
     } else if (!currentUser && isOnline) {
-      console.log('⚠️ Not authenticated but online - attempting Supabase write anyway');
-      // Not authenticated but Supabase is online - let RLS handle it
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (transformToSupabase) {
-          const supabaseItems = transformToSupabase(dataToSet);
-          
-          // Clear existing data and insert new data
-          await supabase
-            .from(supabaseTable!)
-            .delete()
-            .neq('id', '00000000-0000-0000-0000-000000000000');
-
-          if (supabaseItems.length > 0) {
-            const { error: insertError } = await supabase
-              .from(supabaseTable!)
-              .insert(supabaseItems);
-            
-            if (insertError) {
-              console.error('❌ Supabase insert error (unauthenticated):', insertError);
-              throw insertError;
-            }
-          }
-        }
-
-        setSupabaseData(dataToSet);
-        console.log(`✅ Successfully wrote to ${supabaseTable} (unauthenticated)`);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Authentication required to make changes');
-        console.error('❌ Authentication required for edit operation:', err);
-        console.log('⚠️ Falling back to localStorage due to auth error');
-        setLocalData(dataToSet); // Fallback to localStorage on auth error
-        throw new Error('Please sign in to make changes');
-      } finally {
-        setLoading(false);
-      }
+      console.log('⚠️ Not authenticated - falling back to localStorage');
+      // Not authenticated - use localStorage only
+      setLocalData(dataToSet);
+      throw new Error('Please sign in to make changes');
     } else {
       // Fallback to localStorage when offline or other conditions not met
       console.log('💾 Writing to localStorage (offline mode)');
@@ -242,7 +208,7 @@ export function useSupabaseData<T>(
   };
 }
 
-// Specialized hooks for each data type
+// Specialized hooks for each data type - simplified for single user
 export function useSupabaseProviders(defaultValue: Provider[] = []) {
   return useSupabaseData(
     'tempoProviders',
@@ -367,6 +333,7 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
   );
 }
 
+// Simplified settings for single user
 export function useSupabaseUserSettings(defaultValue: UserSettings, userId?: string) {
   const [settings, setSettings] = useState<UserSettings>(defaultValue);
   const [localSettings, setLocalSettings] = useLocalStorage<UserSettings>('tempoUserSettings', defaultValue);
@@ -375,31 +342,49 @@ export function useSupabaseUserSettings(defaultValue: UserSettings, userId?: str
 
   const isOnline = isSupabaseConfigured();
 
-  // Fetch settings from Supabase
+  // Simplified settings fetch (no user isolation)
   const fetchSettings = useCallback(async () => {
-    if (!isOnline || !userId) return;
+    if (!isOnline) return;
 
     try {
       setLoading(true);
-      const userSettings = await dbHelpers.getUserSettings(userId);
-      if (userSettings) {
-        setSettings(userSettings);
+      // Get the first (and only) settings record
+      const { data, error } = await supabase
+        ?.from('app_settings')
+        .select('settings')
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw error;
+      }
+      
+      if (data?.settings) {
+        setSettings(data.settings);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch settings');
     } finally {
       setLoading(false);
     }
-  }, [isOnline, userId]);
+  }, [isOnline]);
 
   // Update settings
   const updateSettings = useCallback(async (newSettings: Partial<UserSettings>) => {
     const updatedSettings = { ...settings, ...newSettings };
 
-    if (isOnline && userId) {
+    if (isOnline) {
       try {
         setLoading(true);
-        await dbHelpers.saveUserSettings(userId, updatedSettings);
+        // Upsert the settings (single record)
+        const { error } = await supabase
+          ?.from('app_settings')
+          .upsert({
+            settings: updatedSettings,
+            updated_at: new Date().toISOString()
+          });
+        
+        if (error) throw error;
         setSettings(updatedSettings);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to save settings');
@@ -411,15 +396,15 @@ export function useSupabaseUserSettings(defaultValue: UserSettings, userId?: str
       setLocalSettings(updatedSettings);
       setSettings(updatedSettings);
     }
-  }, [isOnline, userId, settings, setLocalSettings]);
+  }, [isOnline, settings, setLocalSettings]);
 
   useEffect(() => {
-    if (isOnline && userId) {
+    if (isOnline) {
       fetchSettings();
     } else {
       setSettings(localSettings);
     }
-  }, [fetchSettings, isOnline, userId, localSettings]);
+  }, [fetchSettings, isOnline, localSettings]);
 
   return {
     settings: isOnline ? settings : localSettings,
