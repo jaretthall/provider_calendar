@@ -3,7 +3,7 @@ import React, { useMemo, useContext, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Shift, FilterState, Provider, RecurringFrequency } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
-import { getISODateString, generateRecurringDates, addDays, getInitials } from '../utils/dateUtils';
+import { getISODateString, generateRecurringDates, addDays, getInitials, getTodayInEasternTime } from '../utils/dateUtils';
 import ShiftBadge from './ShiftBadge';
 import VacationBar from './VacationBar';
 import { ModalContext, AppContext, AuthContext } from '../App';
@@ -342,7 +342,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
     }
   }, [isAdmin, openModal, openShiftDetailsModalCb]);
 
-  const todayString = getISODateString(new Date());
+  const todayString = getISODateString(getTodayInEasternTime());
 
   return (
     <div className="bg-white shadow-lg rounded-lg p-1 md:p-2">

@@ -1,5 +1,6 @@
 
 import { Provider, ClinicType, Shift, RecurringFrequency, UserRole, MedicalAssistant, UserSettings, CalendarViewMode } from './types';
+import { getTodayInEasternTime, getISODateString } from './utils/dateUtils';
 
 export const APP_NAME = "Clinica Provider Schedule";
 
@@ -65,7 +66,7 @@ export const INITIAL_MEDICAL_ASSISTANTS: MedicalAssistant[] = [
 ];
 
 
-const today = new Date();
+const today = getTodayInEasternTime();
 const tomorrow = new Date(today);
 tomorrow.setDate(today.getDate() + 1);
 const dayAfterTomorrow = new Date(today);
@@ -80,8 +81,8 @@ export const INITIAL_SHIFTS: Shift[] = [
     providerId: 'prov1',
     clinicTypeId: 'clinic1',
     medicalAssistantIds: ['ma1'],
-    startDate: today.toISOString().split('T')[0],
-    endDate: today.toISOString().split('T')[0],
+    startDate: getISODateString(today),
+    endDate: getISODateString(today),
     startTime: '09:00',
     endTime: '17:00',
     isVacation: false,
@@ -96,8 +97,8 @@ export const INITIAL_SHIFTS: Shift[] = [
     providerId: 'prov2',
     clinicTypeId: 'clinic2',
     medicalAssistantIds: ['ma1', 'ma2'],
-    startDate: tomorrow.toISOString().split('T')[0],
-    endDate: tomorrow.toISOString().split('T')[0],
+    startDate: getISODateString(tomorrow),
+    endDate: getISODateString(tomorrow),
     startTime: '10:00',
     endTime: '18:00',
     isVacation: false,
@@ -110,8 +111,8 @@ export const INITIAL_SHIFTS: Shift[] = [
   {
     id: 'shift3',
     providerId: 'prov1',
-    startDate: dayAfterTomorrow.toISOString().split('T')[0],
-    endDate: dayAfterTomorrowVacationEnd.toISOString().split('T')[0],
+    startDate: getISODateString(dayAfterTomorrow),
+    endDate: getISODateString(dayAfterTomorrowVacationEnd),
     isVacation: true,
     notes: 'Annual leave',
     color: VACATION_COLOR, 

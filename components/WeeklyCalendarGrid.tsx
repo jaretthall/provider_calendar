@@ -3,7 +3,7 @@ import React, { useMemo, useContext, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Shift, FilterState, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant type
 import { DAYS_OF_WEEK } from '../constants';
-import { getISODateString, generateRecurringDates, addDays, getWeekDays, getInitials } from '../utils/dateUtils';
+import { getISODateString, generateRecurringDates, addDays, getWeekDays, getInitials, getTodayInEasternTime } from '../utils/dateUtils';
 import ShiftBadge from './ShiftBadge';
 import VacationBar from './VacationBar';
 import { ModalContext, AppContext, AuthContext } from '../App';
@@ -246,7 +246,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
   }, [isAdmin, openModal, openShiftDetailsModalCb]);
 
 
-  const todayString = getISODateString(new Date());
+  const todayString = getISODateString(getTodayInEasternTime());
   const orderedDaysOfWeek = [...DAYS_OF_WEEK.slice(weekStartsOn), ...DAYS_OF_WEEK.slice(0, weekStartsOn)];
 
   return (
