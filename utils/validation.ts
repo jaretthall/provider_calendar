@@ -89,15 +89,23 @@ export const validateTimeRange = (startTime: string, endTime: string): FieldVali
   return { isValid: true };
 };
 
-// Color validation
+// Color validation - accepts both hex colors and Tailwind CSS classes
 export const validateColor = (color: string): FieldValidationResult => {
   if (!color) return { isValid: false, error: 'Color is required' };
   
+  // Check if it's a hex color
   const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-  if (!hexRegex.test(color)) {
-    return { isValid: false, error: 'Please enter a valid hex color (e.g., #FF0000)' };
+  if (hexRegex.test(color)) {
+    return { isValid: true };
   }
-  return { isValid: true };
+  
+  // Check if it's a Tailwind CSS color class
+  const tailwindColorRegex = /^bg-[a-z]+-\d{2,3}$/;
+  if (tailwindColorRegex.test(color)) {
+    return { isValid: true };
+  }
+  
+  return { isValid: false, error: 'Please select a valid color' };
 };
 
 // Name validation with whitespace checking
