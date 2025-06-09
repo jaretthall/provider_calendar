@@ -45,7 +45,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onClose }) => {
           Sign In to Clinica Provider Schedule
         </h2>
         <p className="text-sm text-gray-600">
-          Please enter your credentials to access the scheduling system.
+          Enter your credentials to access the healthcare scheduling and management system.
         </p>
       </div>
 
@@ -114,19 +114,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onClose }) => {
       </form>
 
       <div className="border-t border-gray-200 pt-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Demo Account</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Access</h3>
         <button
           type="button"
           onClick={() => handleDemoLogin('admin')}
           className="w-full text-sm bg-blue-100 text-blue-800 py-2 px-4 rounded border hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={isLoading}
         >
-          Use Admin Demo Account<br/>
-                          <span className="text-xs text-blue-600">Username: admin | Password: CPS2025!Secure</span>
+          Administrator Access<br/>
+          <span className="text-xs text-blue-600">Username: admin | Password: CPS2025!Secure</span>
         </button>
         
         <div className="mt-3 text-xs text-gray-500">
-          <p><strong>Note:</strong> This is a demo application. In production, use secure authentication.</p>
+          <p>Use the administrator account to access all scheduling features and management tools.</p>
         </div>
       </div>
     </div>
