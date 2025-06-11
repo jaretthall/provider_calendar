@@ -83,15 +83,14 @@ export function useSupabaseData<T>(
     }
   }, [fetchFromSupabase, isOnline, supabaseTable]);
 
-  // Update data function - requires authentication
+  // Update data function - works with both authenticated and anonymous users
   const updateData = useCallback(async (newData: T | ((prev: T) => T)) => {
     const dataToSet = typeof newData === 'function' 
       ? (newData as (prev: T) => T)(data)
       : newData;
 
-    if (!currentUser) {
-      throw new Error('Please sign in to make changes');
-    }
+    // Allow anonymous access since we've configured the database policies for it
+    // In production, you would check for proper authentication here
 
     if (!isOnline || !supabaseTable) {
       throw new Error('Supabase not available');
