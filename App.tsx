@@ -32,7 +32,6 @@ import PdfExportSetupModal from './components/PdfExportSetupModal';
 import LoginForm from './components/LoginForm';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
-import SupabaseTest from './components/SupabaseTest';
 import { ToastContainer } from './components/Toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth, usePermissions } from './hooks/useAuth';
@@ -879,11 +878,9 @@ const MainApplication: React.FC = () => {
         return 'Export Options';
       case 'PDF_EXPORT_SETUP_MODAL':
         return 'PDF Export Configuration';
-      case 'LOGIN_FORM':
-        return 'Sign In';
-      case 'SUPABASE_TEST':
-        return 'Supabase Connection Test';
-      default:
+             case 'LOGIN_FORM':
+         return 'Sign In';
+       default:
         return 'Modal';
     }
   };
@@ -905,11 +902,9 @@ const MainApplication: React.FC = () => {
       case 'CONFIRMATION_MODAL':
       case 'EXPORT_OPTIONS_MODAL':
       case 'PDF_EXPORT_SETUP_MODAL':
-      case 'LOGIN_FORM':
-        return 'md';
-      case 'SUPABASE_TEST':
-        return '4xl';
-      default:
+             case 'LOGIN_FORM':
+         return 'md';
+       default:
         return 'md';
     }
   };
@@ -1037,7 +1032,7 @@ const MainApplication: React.FC = () => {
                 {modalState.type === 'EXPORT_OPTIONS_MODAL' && <ExportOptionsModal {...modalState.props} isSubmitting={isSubmitting} onClose={closeModal} />}
                 {modalState.type === 'PDF_EXPORT_SETUP_MODAL' && <PdfExportSetupModal {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
-                {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
+                
               </Modal>
               
               <DragOverlay dropAnimation={null}>

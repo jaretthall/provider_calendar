@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinica Provider Schedule - Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .shift-badge {
+            transition: all 0.2s ease;
+        }
+        .vacation-bar {
+            background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- Header -->
+        <header class="bg-white shadow-md p-4 rounded-lg mb-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <h1 class="text-2xl font-bold text-gray-800">Clinica Provider Schedule</h1>
+                    <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">VIEWER ONLY</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="navigateMonth(-1)" class="p-2 rounded-full hover:bg-gray-200" title="Previous month" aria-label="Previous month">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h2 id="current-month" class="text-lg font-semibold text-gray-700"></h2>
+                    <button onclick="navigateMonth(1)" class="p-2 rounded-full hover:bg-gray-200" title="Next month" aria-label="Next month">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                    <button onclick="goToToday()" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                        Today
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading schedule data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Unable to load schedule data</h3>
+                    <p class="mt-1 text-sm text-red-700" id="error-message"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div id="calendar" class="hidden bg-white shadow-lg rounded-lg overflow-hidden">
+            <!-- Calendar will be populated by JavaScript -->
+        </div>
+
+        <!-- Legend -->
+        <div id="legend" class="hidden mt-6 bg-white shadow-lg rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Providers & Clinics</h3>
+            <div id="provider-legend" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4"></div>
+            <div id="clinic-legend" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration - REPLACE WITH YOUR ACTUAL VALUES
+        const SUPABASE_URL = 'https://fgqhclnsndiwdecxvcxi.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncWhjbG5zbmRpd2RlY3h2Y3hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1ODQ4ODYsImV4cCI6MjA2NTE2MDg4Nn0.Q5KbeUgj4buVQL1SE4K1YB6cVpKf3MxNRAw0w-8Uzug';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Global state
+        let currentDate = new Date();
+        let allData = {
+            providers: [],
+            clinicTypes: [],
+            medicalAssistants: [],
+            shifts: []
+        };
+
+        // Initialize the viewer
+        async function init() {
+            try {
+                await loadAllData();
+                renderCalendar();
+                renderLegend();
+                hideLoading();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // Load all data from Supabase
+        async function loadAllData() {
+            const [providersRes, clinicsRes, masRes, shiftsRes] = await Promise.all([
+                supabase.from('providers').select('*').eq('is_active', true),
+                supabase.from('clinic_types').select('*').eq('is_active', true),
+                supabase.from('medical_assistants').select('*').eq('is_active', true),
+                supabase.from('shifts').select('*')
+            ]);
+
+            if (providersRes.error) throw new Error('Failed to load providers');
+            if (clinicsRes.error) throw new Error('Failed to load clinic types');
+            if (masRes.error) throw new Error('Failed to load medical assistants');
+            if (shiftsRes.error) throw new Error('Failed to load shifts');
+
+            allData.providers = providersRes.data || [];
+            allData.clinicTypes = clinicsRes.data || [];
+            allData.medicalAssistants = masRes.data || [];
+            allData.shifts = shiftsRes.data || [];
+        }
+
+        // Render the calendar
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // Update header
+            document.getElementById('current-month').textContent = 
+                currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            // Generate calendar grid
+            const calendarHTML = `
+                <div class="grid grid-cols-7 gap-px border-l border-t border-gray-200">
+                    ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => 
+                        `<div class="py-2 text-center font-semibold text-sm text-gray-600 bg-gray-50 border-r border-b border-gray-200">${day}</div>`
+                    ).join('')}
+                </div>
+                <div class="grid grid-cols-7 auto-rows-fr gap-px border-l border-gray-200 min-h-[75vh]">
+                    ${generateCalendarDays(year, month)}
+                </div>
+            `;
+            
+            document.getElementById('calendar').innerHTML = calendarHTML;
+        }
+
+        // Generate calendar days
+        function generateCalendarDays(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const startOfWeek = new Date(firstDay);
+            startOfWeek.setDate(firstDay.getDate() - firstDay.getDay());
+            
+            let daysHTML = '';
+            let currentDay = new Date(startOfWeek);
+            
+            // Generate 42 days (6 weeks)
+            for (let i = 0; i < 42; i++) {
+                const isCurrentMonth = currentDay.getMonth() === month;
+                const isToday = isToday_check(currentDay);
+                const dayShifts = getShiftsForDate(currentDay);
+                
+                daysHTML += `
+                    <div class="border-r border-b border-gray-200 relative flex flex-col p-1 min-h-[100px] ${
+                        isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
+                    } ${isToday ? 'bg-blue-50' : ''}">
+                        <div class="text-sm font-medium ${isToday ? 'text-blue-600' : ''} mb-1">
+                            ${currentDay.getDate()}
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            ${renderDayShifts(dayShifts, currentDay)}
+                        </div>
+                    </div>
+                `;
+                
+                currentDay.setDate(currentDay.getDate() + 1);
+            }
+            
+            return daysHTML;
+        }
+
+        // Render shifts for a specific day
+        function renderDayShifts(shifts, date) {
+            const nonVacationShifts = shifts.filter(s => !s.is_vacation);
+            const vacationShifts = shifts.filter(s => s.is_vacation);
+            
+            let html = '';
+            
+            // Show up to 3 non-vacation shifts
+            const shiftsToShow = nonVacationShifts.slice(0, 3);
+            shiftsToShow.forEach(shift => {
+                const provider = allData.providers.find(p => p.id === shift.provider_id);
+                const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
+                
+                html += `
+                    <div class="text-xs px-1 py-0.5 rounded text-white text-center truncate shift-badge" 
+                         style="background-color: ${provider?.color || '#6B7280'}"
+                         title="${provider?.name || 'Unknown'} - ${clinic?.name || 'Vacation'} ${shift.start_time ? `(${shift.start_time}-${shift.end_time})` : ''}">
+                        ${getInitials(provider?.name || '??')}
+                    </div>
+                `;
+            });
+            
+            // Show "more" indicator if there are additional shifts
+            if (nonVacationShifts.length > 3) {
+                html += `
+                    <div class="text-xs text-blue-600 text-center font-medium">
+                        +${nonVacationShifts.length - 3} more
+                    </div>
+                `;
+            }
+            
+            // Show vacation bar if there are vacations
+            if (vacationShifts.length > 0) {
+                const vacationProviders = vacationShifts.map(s => {
+                    const provider = allData.providers.find(p => p.id === s.provider_id);
+                    return getInitials(provider?.name || '??');
+                }).join(', ');
+                
+                html += `
+                    <div class="vacation-bar text-xs px-1 py-0.5 rounded text-white text-center mt-1"
+                         title="Vacation: ${vacationProviders}">
+                        ${vacationProviders}
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        // Get shifts for a specific date
+        function getShiftsForDate(date) {
+            const dateString = date.toISOString().split('T')[0];
+            return allData.shifts.filter(shift => {
+                // Handle single day shifts
+                if (shift.start_date === dateString) return true;
+                
+                // Handle recurring shifts (simplified - you might want to expand this)
+                if (shift.recurring_rule) {
+                    const shiftDate = new Date(shift.start_date);
+                    if (shift.recurring_rule.frequency === 'WEEKLY') {
+                        const daysDiff = Math.floor((date - shiftDate) / (1000 * 60 * 60 * 24));
+                        return daysDiff >= 0 && daysDiff % 7 === 0;
+                    }
+                }
+                
+                return false;
+            });
+        }
+
+        // Render legend
+        function renderLegend() {
+            const providerHTML = allData.providers.map(provider => `
+                <div class="flex items-center space-x-2">
+                    <div class="w-4 h-4 rounded" style="background-color: ${provider.color}"></div>
+                    <span class="text-sm text-gray-700">${provider.name}</span>
+                </div>
+            `).join('');
+            
+            const clinicHTML = allData.clinicTypes.map(clinic => `
+                <div class="flex items-center space-x-2">
+                    <div class="w-4 h-4 rounded" style="background-color: ${clinic.color}"></div>
+                    <span class="text-sm text-gray-700">${clinic.name}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('provider-legend').innerHTML = providerHTML;
+            document.getElementById('clinic-legend').innerHTML = clinicHTML;
+        }
+
+        // Utility functions
+        function getInitials(name) {
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        }
+
+        function isToday_check(date) {
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
+
+        function navigateMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function goToToday() {
+            currentDate = new Date();
+            renderCalendar();
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('calendar').classList.remove('hidden');
+            document.getElementById('legend').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error-message').textContent = message;
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html> 
