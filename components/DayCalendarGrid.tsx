@@ -1,10 +1,13 @@
 import React, { useMemo, useContext, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Shift, FilterState, RecurringFrequency, MedicalAssistant } from '../types';
-import { getISODateString, generateRecurringDates, getInitials } from '../utils/dateUtils';
+import { 
+  formatDateInEasternTime, getISODateString, getInitials, formatTime, generateRecurringDates
+} from '../utils/dateUtils';
+import { ModalContext, AppContext } from '../App';
+import { usePermissions } from '../hooks/useAuth';
+import { Shift, Provider, ClinicType, MedicalAssistant, FilterState, RecurringFrequency } from '../types';
 import ShiftBadge from './ShiftBadge';
 import VacationBar from './VacationBar';
-import { ModalContext, AppContext, AuthContext } from '../App';
 
 interface DayCalendarGridProps {
   currentDate: Date;
@@ -45,9 +48,7 @@ const TimeSlot: React.FC<TimeSlotProps> = ({
   handleVacationBarClick,
   isFirstSlot
 }) => {
-  const authContext = useContext(AuthContext);
-  if (!authContext) throw new Error("AuthContext not found");
-  const { isAdmin } = authContext;
+  const { isAdmin } = usePermissions();
   const dateString = getISODateString(day);
 
   const { setNodeRef, isOver } = useDroppable({
@@ -141,101 +142,72 @@ const TimeSlot: React.FC<TimeSlotProps> = ({
 const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShifts, filters, conflictingShiftIds }) => {
   const modalContext = useContext(ModalContext);
   const appContext = useContext(AppContext);
-  const authContext = useContext(AuthContext);
+  const { isAdmin } = usePermissions();
 
-  if (!modalContext || !appContext || !authContext) throw new Error("Context not found");
+  if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
-  const { isAdmin } = authContext;
   const { getProviderById, getMedicalAssistantById } = appContext;
 
   const dayData = useMemo(() => {
-    const dateString = getISODateString(currentDate);
-    const dayShifts: Shift[] = [];
-    const dayVacations: Shift[] = [];
-    const vacationInitials: string[] = [];
-
+    const dataForDay = { shifts: [] as Shift[], vacations: [] as Shift[], vacationInitials: [] as string[] };
+    
     const relevantShifts = allShifts.filter(shift => {
-      const providerMatch = filters.providerIds.length === 0 || filters.providerIds.includes(shift.providerId);
-      const maMatch = filters.medicalAssistantIds.length === 0 || (shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
-      const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
-      const vacationMatchOverall = shift.isVacation ? filters.showVacations : true;
-      
-      if (shift.isVacation && filters.showVacations) {
-        if (filters.providerIds.length > 0 && !filters.providerIds.includes(shift.providerId)) return false;
-        return true;
-      }
-      return providerMatch && maMatch && clinicMatch && vacationMatchOverall;
+        const providerMatch = filters.providerIds.length === 0 || filters.providerIds.includes(shift.providerId);
+        const maMatch = filters.medicalAssistantIds.length === 0 || (shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
+        const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
+        const vacationMatchOverall = shift.isVacation ? filters.showVacations : true;
+        
+        if (shift.isVacation && filters.showVacations) {
+            if (filters.providerIds.length > 0 && !filters.providerIds.includes(shift.providerId)) return false;
+            return true;
+        }
+        return providerMatch && maMatch && clinicMatch && vacationMatchOverall;
     });
 
     relevantShifts.forEach(shift => {
-      // Use a broader date range for generating recurring dates to ensure we catch all occurrences
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      const occurrences = generateRecurringDates(shift, startOfMonth, endOfMonth, allShifts);
-      
-      occurrences.forEach(occurrenceDate => {
-        if (getISODateString(occurrenceDate) === dateString) {
+      const occurrences = generateRecurringDates(shift, currentDate, currentDate, allShifts);
+      occurrences.forEach((occurrenceDate: Date) => {
+        if (getISODateString(occurrenceDate) === getISODateString(currentDate)) {
           const shiftForDisplay = { ...shift };
           if (shift.isVacation) {
             const provider = getProviderById(shift.providerId);
             const initials = getInitials(provider?.name);
-            if (initials && !vacationInitials.includes(initials)) {
-              vacationInitials.push(initials);
+            if (initials && !dataForDay.vacationInitials.includes(initials)) {
+              dataForDay.vacationInitials.push(initials);
             }
-            if (!dayVacations.find(s => s.id === shiftForDisplay.id && s.startDate === getISODateString(occurrenceDate))) {
-              dayVacations.push({...shiftForDisplay, startDate: getISODateString(occurrenceDate), endDate: getISODateString(occurrenceDate) });
+            if (!dataForDay.vacations.find(s => s.id === shiftForDisplay.id)) {
+              dataForDay.vacations.push(shiftForDisplay);
             }
           } else {
-            if (!dayShifts.find(s => s.id === shiftForDisplay.id && s.startDate === getISODateString(occurrenceDate))) {
-              dayShifts.push({...shiftForDisplay, startDate: getISODateString(occurrenceDate), endDate: getISODateString(occurrenceDate) });
+            if (!dataForDay.shifts.find(s => s.id === shiftForDisplay.id)) {
+              dataForDay.shifts.push(shiftForDisplay);
             }
           }
         }
       });
 
-      if (shift.isExceptionInstance && shift.exceptionForDate === dateString) {
+      if (shift.isExceptionInstance && shift.exceptionForDate === getISODateString(currentDate)) {
         if (shift.isVacation) {
           const provider = getProviderById(shift.providerId);
           const initials = getInitials(provider?.name);
-          if (initials && !vacationInitials.includes(initials)) {
-            vacationInitials.push(initials);
+          if (initials && !dataForDay.vacationInitials.includes(initials)) {
+            dataForDay.vacationInitials.push(initials);
           }
-          if (!dayVacations.find(s => s.id === shift.id)) { 
-            dayVacations.push(shift); 
+          if (!dataForDay.vacations.find(s => s.id === shift.id)) {
+            dataForDay.vacations.push(shift);
           }
         } else {
-          if (!dayShifts.find(s => s.id === shift.id)) { 
-            dayShifts.push(shift); 
+          if (!dataForDay.shifts.find(s => s.id === shift.id)) {
+            dataForDay.shifts.push(shift);
           }
         }
       }
     });
 
-    // Sort shifts by start time and remove duplicates
-    dayShifts.sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
-    
-    const uniqueShifts = new Map<string, Shift>();
-    dayShifts.forEach(s => {
-      const key = `${s.id}-${s.startDate}`;
-      if (!uniqueShifts.has(key)) {
-        uniqueShifts.set(key, s);
-      }
-    });
-    
-    const uniqueVacations = new Map<string, Shift>();
-    dayVacations.forEach(s => {
-      const key = `${s.id}-${s.startDate}`;
-      if (!uniqueVacations.has(key)) {
-        uniqueVacations.set(key, s);
-      }
-    });
+    dataForDay.shifts.sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
 
-    return { 
-      dayShifts: Array.from(uniqueShifts.values()), 
-      dayVacations: Array.from(uniqueVacations.values()), 
-      vacationInitials 
-    };
-  }, [allShifts, filters, currentDate, getProviderById, getMedicalAssistantById]);
+    return dataForDay;
+  }, [allShifts, filters, currentDate, getProviderById]);
 
   // Group shifts by time slots
   const shiftsByTimeSlot = useMemo(() => {
@@ -246,7 +218,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
       slotMap.set(slot, []);
     });
 
-    dayData.dayShifts.forEach(shift => {
+    dayData.shifts.forEach(shift => {
       const startTime = shift.startTime || '09:00';
       const endTime = shift.endTime || '17:00';
       
@@ -263,7 +235,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
     });
 
     return slotMap;
-  }, [dayData.dayShifts]);
+  }, [dayData.shifts]);
 
   const openShiftFormForNewShiftCb = useCallback((date: Date) => {
     if (isAdmin) {
@@ -272,11 +244,11 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
   }, [isAdmin, openModal]);
 
   const openShiftDetailsModalCb = useCallback((shiftsToList: Shift[], dateToList: Date, title?: string) => {
-    openModal('VIEW_SHIFT_DETAILS', { 
-      shifts: shiftsToList, 
-      date: dateToList, 
-      isListView: true,
-      listTitle: title || `Schedule for ${dateToList.toLocaleDateString()}`
+     openModal('VIEW_SHIFT_DETAILS', { 
+        shifts: shiftsToList, 
+        date: dateToList, 
+        isListView: true,
+        listTitle: title || `Schedule for ${dateToList.toLocaleDateString()}`
     });
   }, [openModal]);
 
@@ -289,11 +261,16 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
     if (vacationShiftsForDay.length === 1 && isAdmin) {
       const singleVacationShift = vacationShiftsForDay[0];
       const isRecurringVacationInstance = singleVacationShift.recurringRule && singleVacationShift.recurringRule.frequency !== RecurringFrequency.NONE;
-      openModal('SHIFT_FORM', { 
-        shift: singleVacationShift, 
-        instanceDate: isRecurringVacationInstance ? getISODateString(dayDate) : undefined
-      });
-    } else if (vacationShiftsForDay.length > 0) { 
+      
+      if (isRecurringVacationInstance) {
+        openModal('SHIFT_FORM', { 
+          shift: singleVacationShift, 
+          instanceDate: getISODateString(dayDate) 
+        });
+      } else {
+        openModal('SHIFT_FORM', { shift: singleVacationShift });
+      }
+    } else if (vacationShiftsForDay.length > 1) {
       openShiftDetailsModalCb(vacationShiftsForDay, dayDate, `Vacations on ${dayDate.toLocaleDateString()}`);
     }
   }, [isAdmin, openModal, openShiftDetailsModalCb]);
@@ -311,8 +288,8 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
           })}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          {dayData.dayShifts.length} shifts scheduled
-          {dayData.dayVacations.length > 0 && `, ${dayData.dayVacations.length} vacation${dayData.dayVacations.length === 1 ? '' : 's'}`}
+          {dayData.shifts.length} shifts scheduled
+          {dayData.vacations.length > 0 && `, ${dayData.vacations.length} vacation${dayData.vacations.length === 1 ? '' : 's'}`}
         </p>
       </div>
 
@@ -325,7 +302,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
               time={time}
               day={currentDate}
               shiftsForSlot={shiftsByTimeSlot.get(time) || []}
-              vacationsForDay={dayData.dayVacations}
+              vacationsForDay={dayData.vacations}
               vacationProviderInitials={dayData.vacationInitials}
               conflictingShiftIds={conflictingShiftIds}
               openShiftFormForNewShift={openShiftFormForNewShiftCb}

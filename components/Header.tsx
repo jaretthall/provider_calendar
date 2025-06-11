@@ -1,12 +1,12 @@
-
 import React, { useContext } from 'react';
 import { APP_NAME } from '../constants';
-import { AuthContext, ModalContext, AppContext } from '../App'; // Removed ToastContext as it's not used here
-import { UserRole, CalendarViewMode, ModalType } from '../types';
+import { ModalContext } from '../App';
+import { useAuth, usePermissions } from '../hooks/useAuth';
+import { CalendarViewMode, ModalType } from '../types';
 import CalendarIcon from './icons/CalendarIcon';
 import UploadIcon from './icons/UploadIcon';
 import DownloadIcon from './icons/DownloadIcon';
-import CogIcon from './icons/CogIcon'; // Import CogIcon
+import CogIcon from './icons/CogIcon';
 
 interface HeaderProps {
   currentViewDate: Date; // For "New Shift" button context
@@ -25,17 +25,17 @@ const Header: React.FC<HeaderProps> = ({
   onNavigateToday, 
   onExportData 
 }) => {
-  const authContext = useContext(AuthContext);
+  const { user, isAuthenticated, signOut } = useAuth();
+  const { canEdit } = usePermissions();
   const modalContext = useContext(ModalContext);
   
-  if (!authContext || !modalContext) {
-    throw new Error('AuthContext or ModalContext not found');
+  if (!modalContext) {
+    throw new Error('ModalContext not found');
   }
-  const { currentUser, isAuthenticated, logout, isAdmin } = authContext;
   const { openModal } = modalContext;
 
   const handleLogout = () => {
-    logout();
+    signOut();
   };
 
   const viewModeButtonClasses = (isActive: boolean) => 
@@ -87,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             Today
           </button>
-          {isAdmin && (
+          {canEdit && (
             <button
               onClick={() => openModal('SHIFT_FORM', { initialDate: currentViewDate.toISOString().split('T')[0] })}
               className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
@@ -114,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Export Data</span>
             <span className="sm:hidden">Export</span>
           </button>
-          {isAdmin && (
+          {canEdit && (
             <button
                 onClick={() => openModal('SETTINGS_FORM' as ModalType)}
                 className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
@@ -128,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({
           {isAuthenticated ? (
             <div className="flex items-center space-x-2">
               <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
-                Admin ({currentUser?.username})
+                {canEdit ? 'Admin' : 'User'} ({user?.email?.split('@')[0] || 'User'})
               </span>
               <button
                 onClick={handleLogout}
@@ -143,7 +143,7 @@ const Header: React.FC<HeaderProps> = ({
               className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
               title="Sign in to manage schedules"
             >
-              Admin
+              Sign In
             </button>
           )}
         </div>

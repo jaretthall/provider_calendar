@@ -56,14 +56,23 @@ export interface Shift {
 }
 
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
+  ADMIN = 'admin',
+  VIEW_ONLY = 'view_only',
+  // Legacy support
+  USER = 'view_only',
 }
 
 export interface User {
   id: string;
-  username: string;
+  email: string;
   role: UserRole;
+  firstName?: string;
+  lastName?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Legacy field for backwards compatibility
+  username?: string;
 }
 
 export interface ToastMessage {
@@ -109,12 +118,21 @@ export interface AppContextType {
 }
 
 export interface AuthContextType {
-  currentUser: User | null;
+  user: User | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
-  logout: () => void;
-  setCurrentUserRole: (role: UserRole) => void;
-  isAdmin: boolean;
+  isLoading: boolean;
+  isAdmin: () => boolean;
+  isViewOnly: () => boolean;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, firstName?: string, lastName?: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: any) => Promise<{ success: boolean; error?: string }>;
+  // Legacy support
+  currentUser?: User | null;
+  login?: (username: string, password: string) => boolean;
+  logout?: () => void;
+  setCurrentUserRole?: (role: UserRole) => void;
 }
 
 export type ModalType = 
@@ -131,6 +149,8 @@ export type ModalType =
   | 'EXPORT_OPTIONS_MODAL'
   | 'PDF_EXPORT_SETUP_MODAL'
   | 'LOGIN_FORM'
+  | 'SIGNUP_FORM'
+  | 'USER_PROFILE'
   | 'SUPABASE_TEST';
 
 export interface ModalState {

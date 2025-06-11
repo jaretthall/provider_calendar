@@ -1,6 +1,39 @@
 export interface Database {
   public: {
     Tables: {
+      user_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          email: string;
+          role: 'view_only' | 'admin';
+          first_name: string | null;
+          last_name: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email: string;
+          role?: 'view_only' | 'admin';
+          first_name?: string | null;
+          last_name?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          role?: 'view_only' | 'admin';
+          first_name?: string | null;
+          last_name?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+      };
       providers: {
         Row: {
           id: string;
@@ -171,15 +204,70 @@ export interface Database {
           updated_at?: string;
         };
       };
+      audit_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          table_name: string;
+          record_id: string;
+          action: 'create' | 'update' | 'delete';
+          old_values: any | null;
+          new_values: any | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          table_name: string;
+          record_id: string;
+          action: 'create' | 'update' | 'delete';
+          old_values?: any | null;
+          new_values?: any | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          table_name?: string;
+          record_id?: string;
+          action?: 'create' | 'update' | 'delete';
+          old_values?: any | null;
+          new_values?: any | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      get_user_role: {
+        Args: {
+          user_uuid: string;
+        };
+        Returns: 'view_only' | 'admin';
+      };
+      is_admin: {
+        Args: {
+          user_uuid?: string;
+        };
+        Returns: boolean;
+      };
+      get_shift_conflicts: {
+        Args: {
+          p_provider_id: string;
+          p_start_date: string;
+          p_end_date: string;
+          p_start_time?: string;
+          p_end_time?: string;
+          p_exclude_shift_id?: string;
+        };
+        Returns: {
+          shift_id: string;
+        }[];
+      };
     };
     Enums: {
-      [_ in never]: never;
+      user_role: 'view_only' | 'admin';
     };
     CompositeTypes: {
       [_ in never]: never;

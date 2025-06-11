@@ -1,4 +1,3 @@
-
 import React, { useMemo, useContext, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Shift, FilterState, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant type
@@ -6,7 +5,8 @@ import { DAYS_OF_WEEK } from '../constants';
 import { getISODateString, generateRecurringDates, addDays, getWeekDays, getInitials, getTodayInEasternTime } from '../utils/dateUtils';
 import ShiftBadge from './ShiftBadge';
 import VacationBar from './VacationBar';
-import { ModalContext, AppContext, AuthContext } from '../App';
+import { ModalContext, AppContext } from '../App';
+import { usePermissions } from '../hooks/useAuth';
 
 interface WeeklyCalendarGridProps {
   currentDate: Date;
@@ -39,9 +39,7 @@ const WeeklyDayColumn: React.FC<WeeklyDayColumnProps> = ({
   openShiftDetailsModal,
   handleVacationBarClick,
 }) => {
-  const authContext = useContext(AuthContext);
-  if (!authContext) throw new Error("AuthContext not found");
-  const { isAdmin } = authContext;
+  const { isAdmin } = usePermissions();
   const dateString = getISODateString(day);
 
   const { setNodeRef, isOver } = useDroppable({
@@ -115,12 +113,10 @@ const WeeklyDayColumn: React.FC<WeeklyDayColumnProps> = ({
 const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, allShifts, filters, conflictingShiftIds, weekStartsOn }) => {
   const modalContext = useContext(ModalContext);
   const appContext = useContext(AppContext);
-  const authContext = useContext(AuthContext);
+  const { isAdmin } = usePermissions();
 
-  if (!modalContext || !appContext || !authContext) throw new Error("Context not found");
+  if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
-  const { isAdmin } = authContext;
-  const { getProviderById, getMedicalAssistantById } = appContext; // Added getMedicalAssistantById
 
   const weekDays = useMemo(() => getWeekDays(currentDate, weekStartsOn), [currentDate, weekStartsOn]);
 
@@ -152,7 +148,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
         if (dayData) {
           const shiftForDisplay = { ...shift }; 
           if (shift.isVacation) {
-            const provider = getProviderById(shift.providerId);
+            const provider = appContext.getProviderById(shift.providerId);
             const initials = getInitials(provider?.name);
             if (initials && !dayData.vacationInitials.includes(initials)) {
               dayData.vacationInitials.push(initials);
@@ -173,7 +169,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
             const dayData = dataByDay.get(dateString);
             if (dayData) {
                 if (shift.isVacation) {
-                    const provider = getProviderById(shift.providerId);
+                    const provider = appContext.getProviderById(shift.providerId);
                     const initials = getInitials(provider?.name);
                     if (initials && !dayData.vacationInitials.includes(initials)) {
                         dayData.vacationInitials.push(initials);
@@ -208,7 +204,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
     });
 
     return dataByDay;
-  }, [allShifts, filters, weekDays, getProviderById, getMedicalAssistantById]);
+  }, [allShifts, filters, weekDays, appContext]);
 
 
   const openShiftFormForNewShiftCb = useCallback((date: Date) => {

@@ -1,12 +1,13 @@
 import React, { useContext } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Shift, MedicalAssistant, ClinicType, Provider as ProviderType } from '../types';
-import { AppContext, ModalContext, AuthContext } from '../App';
+import { AppContext, ModalContext } from '../App';
+import { usePermissions } from '../hooks/useAuth';
+import { Shift, Provider, ClinicType, MedicalAssistant } from '../types';
 import { getInitials, getISODateString, formatTime } from '../utils/dateUtils';
 import { RecurringFrequency } from '../types';
 import WarningIcon from './icons/WarningIcon';
-import UsersIcon from './icons/UsersIcon'; 
+import UsersIcon from './icons/UsersIcon';
 
 interface ShiftBadgeProps {
   shift: Shift;
@@ -20,13 +21,12 @@ const MAX_MA_DISPLAY_MONTH = 2;
 const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflicting, viewMode = 'month' }) => {
   const appContext = useContext(AppContext);
   const modalContext = useContext(ModalContext);
-  const authContext = useContext(AuthContext);
+  const { isAdmin } = usePermissions();
 
-  if (!appContext || !modalContext || !authContext) throw new Error("Context not found");
+  if (!appContext || !modalContext) throw new Error("Context not found");
 
   const { getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext;
   const { openModal } = modalContext;
-  const { isAdmin } = authContext;
 
   const dateString = getISODateString(instanceDate);
 

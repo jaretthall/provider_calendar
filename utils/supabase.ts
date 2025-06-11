@@ -5,13 +5,24 @@ import { Database } from '../types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Debug: Check what environment variables are being loaded
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key (first 20 chars):', supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING');
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase configuration missing. The application will run in localStorage mode.');
 }
 
+/**
+ * Check if Supabase is properly configured with required environment variables
+ */
+export const isSupabaseConfigured = (): boolean => {
+  return !!(supabaseUrl && supabaseAnonKey);
+};
+
 // Create Supabase client only if configuration is available
 export const supabase: SupabaseClient<Database> | null = 
-  (supabaseUrl && supabaseAnonKey) 
+  isSupabaseConfigured() 
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           autoRefreshToken: true,
@@ -25,11 +36,6 @@ export const supabase: SupabaseClient<Database> | null =
         }
       })
     : null;
-
-// Check if Supabase is configured
-export const isSupabaseConfigured = (): boolean => {
-  return Boolean(supabaseUrl && supabaseAnonKey && supabase);
-};
 
 // Database table names
 export const TABLES = {

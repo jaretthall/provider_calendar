@@ -1,9 +1,14 @@
 import React, { useContext } from 'react';
 import { Shift, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant
-import { AppContext, AuthContext, ModalContext } from '../App';
+import { AppContext, ModalContext } from '../App';
 import { formatTime, getISODateString, getInitials } from '../utils/dateUtils';
 import { RECURRING_FREQUENCY_OPTIONS, DAYS_OF_WEEK } from '../constants';
 import EditIcon from './icons/EditIcon';
+import { usePermissions } from '../hooks/useAuth';
+import PencilIcon from './icons/PencilIcon';
+import TrashIcon from './icons/TrashIcon';
+import DuplicateIcon from './icons/DuplicateIcon';
+import { formatDateInEasternTime } from '../utils/dateUtils';
 
 
 interface ViewShiftDetailsModalProps {
@@ -24,13 +29,12 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
     onClose 
 }) => {
   const appContext = useContext(AppContext);
-  const authContext = useContext(AuthContext);
   const modalContext = useContext(ModalContext);
+  const { isAdmin } = usePermissions();
 
-  if (!appContext || !authContext || !modalContext) throw new Error("Context not found");
+  if (!appContext || !modalContext) throw new Error("Context not found");
   
   const { getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; // Added getMedicalAssistantById
-  const { isAdmin } = authContext;
   const { openModal, closeModal: closeThisModal } = modalContext;
 
 
@@ -56,7 +60,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
   };
 
   const handleEditShiftFromList = (shiftToEdit: Shift) => {
-    if (!isAdmin || !instanceDateContext) return;
+    if (!instanceDateContext) return;
     closeThisModal(); 
     openModal('SHIFT_FORM', { 
         shift: shiftToEdit, 
@@ -65,7 +69,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
   };
 
   const handleNewShiftFromList = () => {
-    if (!isAdmin || !instanceDateContext) return;
+    if (!instanceDateContext) return;
     closeThisModal();
     openModal('SHIFT_FORM', { 
         initialDate: getISODateString(instanceDateContext) 
@@ -100,7 +104,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
                                 </p>
                                 {s.notes && <p className="text-xs text-gray-500 mt-1 truncate">Notes: {s.notes}</p>}
                             </div>
-                            {isAdmin && (
+                            {s.isVacation && (
                                 <button 
                                     onClick={() => handleEditShiftFromList(s)}
                                     className="p-2 text-blue-600 hover:text-blue-800 rounded-md hover:bg-blue-100"
@@ -114,7 +118,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
                 );
             })}
              <div className="flex justify-between items-center pt-4">
-                {isAdmin && instanceDateContext && (
+                {instanceDateContext && (
                     <button 
                         type="button" 
                         onClick={handleNewShiftFromList}

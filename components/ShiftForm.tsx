@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Shift, Provider, ClinicType, RecurringRule, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant
-import { AppContext, AuthContext, ToastContext, ModalContext } from '../App';
+import { AppContext, ToastContext, ModalContext } from '../App';
+import { useAuth, usePermissions } from '../hooks/useAuth';
 import { PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR } from '../constants';
 import RecurringShiftFormSection from './RecurringShiftFormSection';
 import { getISODateString, getInitials } from '../utils/dateUtils'; // Added getInitials
@@ -37,13 +38,15 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     onClose 
 }) => {
   const appContext = useContext(AppContext);
-  const authContext = useContext(AuthContext);
   const toastContext = useContext(ToastContext); 
   const modalContext = useContext(ModalContext);
+  
+  // Use new authentication hooks
+  const { user: currentUser } = useAuth();
+  const { canEdit } = usePermissions();
 
-  if (!appContext || !authContext || !toastContext || !modalContext) throw new Error("Context not found");
-  const { providers, clinics, medicalAssistants, shifts: allShifts, addShift, updateShift, deleteShift, getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; // Added medicalAssistants, getMedicalAssistantById
-  const { currentUser, isAdmin } = authContext; 
+  if (!appContext || !toastContext || !modalContext) throw new Error("Context not found");
+  const { providers, clinics, medicalAssistants, shifts: allShifts, addShift, updateShift, deleteShift, getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; // Added medicalAssistants, getMedicalAssistantById 
   const { addToast } = toastContext; 
   const { openModal } = modalContext;
 
@@ -283,7 +286,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   };
 
   const handleDuplicate = async () => {
-    if (!isAdmin) {
+    if (!canEdit) {
         addToast("You don't have permission to duplicate shifts.", 'error');
         return;
     }
@@ -339,7 +342,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   };
 
   const handleDeleteShift = () => {
-    if (!shift?.id || !isAdmin) return;
+    if (!shift?.id || !canEdit) return;
 
     const shiftBeingEdited = shift;
     let confirmMessage = "";
@@ -402,8 +405,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     return ''; 
   }
 
-  const showDuplicateButton = isAdmin && (editMode === 'singleInstance' || editMode === 'entireSeries');
-  const showDeleteButton = isAdmin && shift?.id;
+  const showDuplicateButton = canEdit && (editMode === 'singleInstance' || editMode === 'entireSeries');
+  const showDeleteButton = canEdit && shift?.id;
 
 
   return (

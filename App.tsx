@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, useEffect, createContext } from 'react';
+import React, { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   DndContext, 
@@ -35,6 +34,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import SupabaseTest from './components/SupabaseTest';
 import { ToastContainer } from './components/Toast';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth, usePermissions } from './hooks/useAuth';
+import { isSupabaseConfigured } from './utils/supabase';
 import { 
   Provider, ClinicType, Shift, User, UserRole, ToastMessage, 
   AppContextType, AuthContextType, ModalContextType, ModalState, 
@@ -56,9 +58,7 @@ import ChevronLeftIcon from './components/icons/ChevronLeftIcon';
 import ChevronRightIcon from './components/icons/ChevronRightIcon';
 import ShiftDragOverlayPreview from './components/ShiftDragOverlayPreview';
 
-
 export const AppContext = createContext<AppContextType | null>(null);
-export const AuthContext = createContext<AuthContextType | null>(null);
 export const ModalContext = createContext<ModalContextType | null>(null);
 export const ToastContext = createContext<ToastContextType | null>(null);
 export const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -74,29 +74,80 @@ interface DraggableItemData {
   maIndicators?: {initials: string, color: string}[]; 
 }
 
+// Authentication wrapper component
+const AuthenticatedApp: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  // Show loading state while authentication is initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-// Demo credentials for authentication
-const DEMO_CREDENTIALS = {
-  admin: { password: 'CPS2025!Secure', role: UserRole.ADMIN }
+  // Show login form if not authenticated and Supabase is configured
+  if (!isAuthenticated && isSupabaseConfigured()) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Clinica Provider Schedule</h1>
+            <p className="text-gray-600">Please sign in to continue</p>
+          </div>
+          <LoginForm onClose={() => {}} />
+        </div>
+      </div>
+    );
+  }
+
+  // Render the main application
+  return <MainApplication />;
 };
 
-const App: React.FC = () => {
+// Toast Provider component to manage toast state at the top level
+const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((message: string, type: ToastMessage['type'], duration: number = 3000) => {
+    const id = uuidv4();
+    setToasts(prevToasts => [...prevToasts, { id, message, type, duration }]);
+  }, []);
+  
+  const dismissToast = (id: string) => {
+    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
+  };
+
+  return (
+    <ToastContext.Provider value={{ addToast }}>
+      {children}
+      <ToastContainer toasts={toasts} dismissToast={dismissToast} />
+    </ToastContext.Provider>
+  );
+};
+
+// Main application component (previously the main content of App)
+const MainApplication: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const { canEdit } = usePermissions();
+  const { addToast } = useContext(ToastContext)!;
+  
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
   const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
   const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
   const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMAs', INITIAL_MEDICAL_ASSISTANTS);
   const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('tempoCurrentUser', null);
-  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('tempoIsAuthenticated', false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth >= 1024); 
   const [conflictingShiftIds, setConflictingShiftIds] = useState<Set<string>>(new Set());
   const [activeDragItem, setActiveDragItem] = useState<DraggableItemData | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>(userSettings.defaultCalendarView);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
 
   const [filters, setFilters] = useLocalStorage<FilterState>('tempoFilters', {
     providerIds: [],
@@ -105,7 +156,8 @@ const App: React.FC = () => {
     showVacations: true,
   });
 
-  const isAdmin = isAuthenticated && currentUser?.role === UserRole.ADMIN;
+  // Legacy support for components that still expect isAdmin boolean
+  const isAdmin = canEdit;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -120,7 +172,6 @@ const App: React.FC = () => {
     setUserSettings(prev => ({...prev, ...newSettings}));
     addToast('Settings updated successfully.', 'success');
   };
-
 
   useEffect(() => {
     let detectionWindowStart: Date;
@@ -143,15 +194,6 @@ const App: React.FC = () => {
     setConflictingShiftIds(conflicts);
   }, [shifts, currentDate, calendarViewMode, userSettings.weekStartsOn]);
 
-  const addToast = useCallback((message: string, type: ToastMessage['type'], duration: number = 3000) => {
-    const id = uuidv4();
-    setToasts(prevToasts => [...prevToasts, { id, message, type, duration }]);
-  }, []);
-  
-  const dismissToast = (id: string) => {
-    setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));
-  };
-
   const closeModal = () => setModalState({ type: null, props: {} });
 
   const openModal = (type: ModalState['type'], props?: any) => {
@@ -162,7 +204,7 @@ const App: React.FC = () => {
         modalPropsBase.shift.recurringRule.frequency !== RecurringFrequency.NONE && 
         !modalPropsBase.shift.isExceptionInstance && 
         modalPropsBase.instanceDate && 
-        isAdmin
+        canEdit
        ) {
         setModalState({ 
             type: 'EDIT_RECURRENCE_CHOICE', 
@@ -198,105 +240,85 @@ const App: React.FC = () => {
                         closeModal();
                     }
                 },
-                onClose: closeModal 
-            } 
-        });
-    } else if (type === 'SHIFT_FORM' && modalPropsBase?.shift && !isAdmin) {
-        setModalState({ type: 'VIEW_SHIFT_DETAILS', props: { ...modalPropsBase, onClose: closeModal } });
-    } else if (type === 'EXPORT_OPTIONS_MODAL') {
-        setModalState({
-            type: 'EXPORT_OPTIONS_MODAL',
-            props: {
-                ...modalPropsBase,
-                openPdfSetupModal: () => {
-                    closeModal(); // Close ExportOptionsModal
-                    openModal('PDF_EXPORT_SETUP_MODAL'); // Open PdfExportSetupModal
-                },
-                onClose: closeModal,
+                onCancel: closeModal
             }
         });
-    } else if (type === 'LOGIN_FORM') {
-        setModalState({
-            type: 'LOGIN_FORM',
-            props: {
-                onLogin: login,
-                onClose: closeModal,
-            }
-        });
-    }
-    else {
+    } else {
         setModalState({ type, props: { ...modalPropsBase, onClose: closeModal } });
     }
   };
-  
+
+  // Legacy authentication functions for backward compatibility
   const login = (username: string, password: string): boolean => {
-    const credentials = DEMO_CREDENTIALS[username as keyof typeof DEMO_CREDENTIALS];
-    if (credentials && credentials.password === password) {
-      const user: User = {
-        id: uuidv4(),
-        username,
-        role: credentials.role
-      };
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      addToast(`Welcome back, ${username}!`, 'success');
-      return true;
-    }
+    // This is for backward compatibility with existing components
+    // Real authentication is handled by AuthContext
     return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    setModalState({ type: null, props: {} }); // Close any open modals
-    addToast('You have been signed out.', 'info');
+    // Legacy function - actual logout is handled by AuthContext
   };
 
   const setCurrentUserRole = (role: UserRole) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
-      addToast(`Switched to ${role} role.`, 'info');
-    }
+    // Legacy function - roles are managed through Supabase now
   };
-  
-  const getProviderById = useCallback((id: string) => providers.find(p => p.id === id), [providers]);
-  const getClinicTypeById = useCallback((id: string) => clinics.find(c => c.id === id), [clinics]);
-  const getMedicalAssistantById = useCallback((id: string) => medicalAssistants.find(ma => ma.id === id), [medicalAssistants]);
-  const getShiftById = useCallback((id: string) => shifts.find(s => s.id === id), [shifts]);
 
   const addProvider = async (providerData: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!canEdit) {
+      addToast('You do not have permission to add providers', 'error');
+      return;
+    }
+
     const newProvider: Provider = {
       ...providerData,
       id: uuidv4(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
     setProviders(prev => [...prev, newProvider]);
-    addToast(`Provider "${newProvider.name}" added.`, 'success');
+    addToast(`Provider "${newProvider.name}" added successfully.`, 'success');
   };
 
   const updateProvider = async (updatedProvider: Provider) => {
-    setProviders(prev => prev.map(p => p.id === updatedProvider.id ? { ...updatedProvider, updatedAt: new Date().toISOString() } : p));
-    setShifts(prevShifts => prevShifts.map(s => {
-        if (s.providerId === updatedProvider.id && !s.isVacation) {
-            const clinic = s.clinicTypeId ? getClinicTypeById(s.clinicTypeId) : undefined;
-            return {
-                ...s,
-                color: updatedProvider.color || clinic?.color || DEFAULT_EVENT_COLOR,
-                title: `${updatedProvider.name} @ ${clinic?.name || 'N/A'}`
-            };
-        }
-        return s;
-    }));
-    addToast(`Provider "${updatedProvider.name}" updated.`, 'success');
+    if (!canEdit) {
+      addToast('You do not have permission to update providers', 'error');
+      return;
+    }
+
+    setProviders(prev => prev.map(p => 
+      p.id === updatedProvider.id 
+        ? { ...updatedProvider, updatedAt: new Date().toISOString() }
+        : p
+    ));
+
+    const shiftsToUpdate = shifts.filter(s => s.providerId === updatedProvider.id);
+    if (shiftsToUpdate.length > 0) {
+      setShifts(prev => prev.map(s => 
+        s.providerId === updatedProvider.id 
+          ? { ...s, color: s.isVacation ? VACATION_COLOR : updatedProvider.color, updatedAt: new Date().toISOString() }
+          : s
+      ));
+    }
+
+    addToast(`Provider "${updatedProvider.name}" updated successfully.`, 'success');
   };
 
   const deleteProvider = async (providerId: string) => {
-    const providerName = providers.find(p => p.id === providerId)?.name || 'Unknown Provider';
+    if (!canEdit) {
+      addToast('You do not have permission to delete providers', 'error');
+      return;
+    }
+
     setProviders(prev => prev.filter(p => p.id !== providerId));
-    setShifts(prev => prev.filter(s => s.providerId !== providerId)); 
-    addToast(`Provider "${providerName}" and their shifts deleted.`, 'success');
+    setShifts(prev => prev.filter(s => s.providerId !== providerId));
+    addToast('Provider deleted successfully.', 'success');
   };
+
+  const getProviderById = (id: string) => providers.find(p => p.id === id);
+  const getClinicTypeById = (id: string) => clinics.find(c => c.id === id);
+  const getMedicalAssistantById = (id: string) => medicalAssistants.find(ma => ma.id === id);
+  const getShiftById = (id: string) => shifts.find(s => s.id === id);
 
   const addClinicType = async (clinicData: Omit<ClinicType, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newClinic: ClinicType = {
@@ -610,7 +632,7 @@ const App: React.FC = () => {
             exceptionForDate: existingShift?.exceptionForDate || incomingShift.exceptionForDate,
             createdAt: existingShift?.createdAt || now,
             updatedAt: now,
-            createdByUserId: existingShift?.createdByUserId || incomingShift.createdByUserId || currentUser?.id,
+            createdByUserId: existingShift?.createdByUserId || incomingShift.createdByUserId || user?.id,
             ...incomingShift 
         };
         
@@ -732,10 +754,10 @@ const App: React.FC = () => {
     const { active, over } = event;
     setActiveDragItem(null); 
   
-    if (!isAdmin || !over || !active.data.current) return;
+    if (!canEdit || !over || !active.data.current || !over.data.current) return;
   
     const draggedItemType = active.data.current.type as 'provider' | 'shift';
-    const dropTargetType = over.data.current?.type as 'dayCell' | undefined;
+    const dropTargetType = over.data.current.type as 'dayCell' | undefined;
   
     if (draggedItemType === 'provider' && dropTargetType === 'dayCell') {
       const providerId = active.data.current.providerId as string;
@@ -755,8 +777,7 @@ const App: React.FC = () => {
       });
     } else if (draggedItemType === 'shift' && dropTargetType === 'dayCell') {
       const draggedShiftId = active.data.current.shiftId as string;
-      // const instanceDateString = active.data.current.instanceDateString as string; // Original date of dragged instance
-      const newDateString = over.data.current.dateString as string; // Target date cell
+      const newDateString = over.data.current.dateString as string;
   
       if (!draggedShiftId || !newDateString) return;
   
@@ -816,7 +837,7 @@ const App: React.FC = () => {
             isExceptionInstance: true,
             originalRecurringShiftId: baseSeriesShift.seriesId || baseSeriesShift.id, 
             exceptionForDate: newDateString, 
-            createdByUserId: currentUser?.id,
+            createdByUserId: user?.id,
           };
           await addShift(newExceptionData, true);
           addToast("Shift instance moved as a new, separate occurrence. The original series remains unchanged.", "success", 5000);
@@ -929,10 +950,8 @@ const App: React.FC = () => {
         onDragEnd={handleDragEnd}
       >
         <AppContext.Provider value={appContextValue}>
-          <AuthContext.Provider value={{ currentUser, isAuthenticated, login, logout, setCurrentUserRole, isAdmin }}>
            <SettingsContext.Provider value={settingsContextValue}>
             <ModalContext.Provider value={{ modal: modalState, openModal, closeModal }}>
-              <ToastContext.Provider value={{ addToast }}>
                 <div className="flex h-screen bg-gray-100">
                 <Sidebar 
                     filters={filters} 
@@ -1020,7 +1039,6 @@ const App: React.FC = () => {
                 {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
                 {modalState.type === 'SUPABASE_TEST' && <SupabaseTest />}
               </Modal>
-              <ToastContainer toasts={toasts} dismissToast={dismissToast} />
               
               <DragOverlay dropAnimation={null}>
                 {activeDragItem?.type === 'provider' && activeDragItem.name && activeDragItem.color ? (
@@ -1043,13 +1061,22 @@ const App: React.FC = () => {
                 ) : null}
               </DragOverlay>
 
-            </ToastContext.Provider>
           </ModalContext.Provider>
          </SettingsContext.Provider>
-        </AuthContext.Provider>
-      </AppContext.Provider>
-    </DndContext>
+        </AppContext.Provider>
+      </DndContext>
     </ErrorBoundary>
+  );
+};
+
+// Final App component that provides authentication context
+const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <AuthenticatedApp />
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

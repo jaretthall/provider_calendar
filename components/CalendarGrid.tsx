@@ -1,4 +1,3 @@
-
 import React, { useMemo, useContext, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Shift, FilterState, Provider, RecurringFrequency } from '../types';
@@ -6,7 +5,8 @@ import { DAYS_OF_WEEK } from '../constants';
 import { getISODateString, generateRecurringDates, addDays, getInitials, getTodayInEasternTime } from '../utils/dateUtils';
 import ShiftBadge from './ShiftBadge';
 import VacationBar from './VacationBar';
-import { ModalContext, AppContext, AuthContext } from '../App';
+import { ModalContext, AppContext } from '../App';
+import { usePermissions } from '../hooks/useAuth';
 
 interface CalendarGridProps {
   currentDate: Date;
@@ -47,9 +47,7 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
   handleVacationBarClick,
   personnelCount
 }) => {
-  const authContext = useContext(AuthContext);
-  if (!authContext) throw new Error("AuthContext not found");
-  const { isAdmin } = authContext;
+  const { isAdmin } = usePermissions();
 
   if (!day) return <div role="gridcell" className="border-r border-b border-gray-200 bg-gray-50 min-h-[6rem] sm:min-h-[5rem]"></div>;
   
@@ -163,11 +161,10 @@ const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
 const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, filters, conflictingShiftIds, weekStartsOn }) => {
   const modalContext = useContext(ModalContext);
   const appContext = useContext(AppContext);
-  const authContext = useContext(AuthContext);
+  const { isAdmin } = usePermissions();
 
-  if (!modalContext || !appContext || !authContext) throw new Error("Context not found");
+  if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
-  const { isAdmin } = authContext;
   const { getProviderById } = appContext;
 
   const year = currentDate.getFullYear();
@@ -337,7 +334,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
         shift: singleVacationShift, 
         instanceDate: getISODateString(dayDate) 
       });
-    } else if (vacationShiftsForDay.length > 0) { 
+    } else if (vacationShiftsForDay.length > 1) {
       openShiftDetailsModalCb(vacationShiftsForDay, dayDate, `Vacations on ${dayDate.toLocaleDateString()}`);
     }
   }, [isAdmin, openModal, openShiftDetailsModalCb]);
