@@ -1,7 +1,7 @@
 {
   "name": "clinica-provider-schedule",
   "private": true,
-  "version": "0.3.3",
+  "version": "1.0.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,7 @@
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@supabase/supabase-js": "^2.50.0",
+    "bcrypt": "^6.0.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.1",
     "react": "^19.1.0",

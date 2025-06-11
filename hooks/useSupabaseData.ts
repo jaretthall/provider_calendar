@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured, dbHelpers, TABLES, authHelpers } from '../utils/supabase';
-import useLocalStorage from './useLocalStorage';
 import { 
   Provider, 
   ClinicType, 
@@ -18,16 +17,14 @@ export interface UseSupabaseDataReturn<T> {
   isOnline: boolean;
 }
 
-// Custom hook for managing data with Supabase (with localStorage fallback)
+// Simplified Supabase-only hook (no localStorage fallback)
 export function useSupabaseData<T>(
-  localStorageKey: string,
   defaultValue: T,
   supabaseTable?: string,
   transformToSupabase?: (data: T) => any[],
   transformFromSupabase?: (data: any[]) => T
 ): UseSupabaseDataReturn<T> {
-  const [localData, setLocalData] = useLocalStorage<T>(localStorageKey, defaultValue);
-  const [supabaseData, setSupabaseData] = useState<T>(defaultValue);
+  const [data, setData] = useState<T>(defaultValue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -50,88 +47,97 @@ export function useSupabaseData<T>(
     getCurrentUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = authHelpers.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = authHelpers.onAuthStateChange((_event: any, session: any) => {
       setCurrentUser(session?.user || null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, [isOnline]);
 
   // Fetch data from Supabase
   const fetchFromSupabase = useCallback(async () => {
-    if (!isOnline || !supabaseTable || !currentUser) return;
+    if (!isOnline || !supabaseTable) return;
 
     try {
       setLoading(true);
       setError(null);
 
-      const data = await dbHelpers.getAll(supabaseTable, 'created_at');
-      const transformedData = transformFromSupabase ? transformFromSupabase(data) : data as T;
-      setSupabaseData(transformedData);
+      console.log(`🔄 Fetching ${supabaseTable}`);
+      const result = await dbHelpers.getAll(supabaseTable, 'created_at');
+      const transformedData = transformFromSupabase ? transformFromSupabase(result) : result as T;
+      setData(transformedData);
+      console.log(`✅ Successfully fetched ${supabaseTable}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      console.error('Error fetching from Supabase:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
+      setError(errorMessage);
+      console.error(`❌ Error fetching ${supabaseTable}:`, errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [isOnline, supabaseTable, currentUser, transformFromSupabase]);
+  }, [isOnline, supabaseTable, transformFromSupabase]);
 
   // Initial data fetch
   useEffect(() => {
-    if (isOnline && currentUser) {
+    if (isOnline && supabaseTable) {
       fetchFromSupabase();
     }
-  }, [fetchFromSupabase, isOnline, currentUser]);
+  }, [fetchFromSupabase, isOnline, supabaseTable]);
 
-  // Update data function
+  // Update data function - requires authentication
   const updateData = useCallback(async (newData: T | ((prev: T) => T)) => {
     const dataToSet = typeof newData === 'function' 
-      ? (newData as (prev: T) => T)(isOnline ? supabaseData : localData)
+      ? (newData as (prev: T) => T)(data)
       : newData;
 
-    if (isOnline && supabaseTable && currentUser) {
-      try {
-        setLoading(true);
-        setError(null);
+    if (!currentUser) {
+      throw new Error('Please sign in to make changes');
+    }
 
-        // Transform and sync to Supabase
-        if (transformToSupabase) {
-          const supabaseItems = transformToSupabase(dataToSet);
-          
-          // Clear existing user data and insert new data
-          await supabase
+    if (!isOnline || !supabaseTable) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log(`💾 Writing to Supabase table: ${supabaseTable}`);
+
+      if (transformToSupabase) {
+        const supabaseItems = transformToSupabase(dataToSet);
+        console.log(`📝 Writing ${supabaseItems.length} items to ${supabaseTable}`);
+        
+        // Clear all existing data and insert new data (single user owns all data)
+        await supabase
+          .from(supabaseTable)
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+
+        if (supabaseItems.length > 0) {
+          const { error: insertError } = await supabase
             .from(supabaseTable)
-            .delete()
-            .eq('user_id', currentUser.id);
-
-          if (supabaseItems.length > 0) {
-            const itemsWithUserId = supabaseItems.map(item => ({
-              ...item,
-              user_id: currentUser.id
-            }));
-
-            await supabase
-              .from(supabaseTable)
-              .insert(itemsWithUserId);
+            .insert(supabaseItems);
+          
+          if (insertError) {
+            console.error('❌ Supabase insert error:', insertError);
+            throw insertError;
           }
         }
-
-        setSupabaseData(dataToSet);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update data');
-        console.error('Error updating Supabase:', err);
-        throw err;
-      } finally {
-        setLoading(false);
       }
-    } else {
-      // Fallback to localStorage
-      setLocalData(dataToSet);
+
+      setData(dataToSet);
+      console.log(`✅ Successfully wrote to ${supabaseTable}`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update data';
+      setError(errorMessage);
+      console.error('❌ Error updating Supabase:', err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
-  }, [isOnline, supabaseTable, currentUser, supabaseData, localData, transformToSupabase, setLocalData]);
+  }, [isOnline, supabaseTable, currentUser, data, transformToSupabase]);
 
   return {
-    data: isOnline ? supabaseData : localData,
+    data,
     setData: updateData,
     loading,
     error,
@@ -143,7 +149,6 @@ export function useSupabaseData<T>(
 // Specialized hooks for each data type
 export function useSupabaseProviders(defaultValue: Provider[] = []) {
   return useSupabaseData(
-    'tempoProviders',
     defaultValue,
     TABLES.PROVIDERS,
     (providers: Provider[]) => providers.map(p => ({
@@ -154,20 +159,19 @@ export function useSupabaseProviders(defaultValue: Provider[] = []) {
       created_at: p.createdAt,
       updated_at: p.updatedAt
     })),
-    (data: any[]) => data.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      isActive: p.is_active,
-      createdAt: p.created_at,
-      updatedAt: p.updated_at
+    (data: any[]) => data.map(item => ({
+      id: item.id,
+      name: item.name,
+      color: item.color,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
     }))
   );
 }
 
 export function useSupabaseClinicTypes(defaultValue: ClinicType[] = []) {
   return useSupabaseData(
-    'tempoClinics',
     defaultValue,
     TABLES.CLINIC_TYPES,
     (clinics: ClinicType[]) => clinics.map(c => ({
@@ -178,23 +182,22 @@ export function useSupabaseClinicTypes(defaultValue: ClinicType[] = []) {
       created_at: c.createdAt,
       updated_at: c.updatedAt
     })),
-    (data: any[]) => data.map(c => ({
-      id: c.id,
-      name: c.name,
-      color: c.color,
-      isActive: c.is_active,
-      createdAt: c.created_at,
-      updatedAt: c.updated_at
+    (data: any[]) => data.map(item => ({
+      id: item.id,
+      name: item.name,
+      color: item.color,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
     }))
   );
 }
 
 export function useSupabaseMedicalAssistants(defaultValue: MedicalAssistant[] = []) {
   return useSupabaseData(
-    'tempoMAs',
     defaultValue,
     TABLES.MEDICAL_ASSISTANTS,
-    (mas: MedicalAssistant[]) => mas.map(ma => ({
+    (medicalAssistants: MedicalAssistant[]) => medicalAssistants.map(ma => ({
       id: ma.id,
       name: ma.name,
       color: ma.color,
@@ -202,128 +205,94 @@ export function useSupabaseMedicalAssistants(defaultValue: MedicalAssistant[] = 
       created_at: ma.createdAt,
       updated_at: ma.updatedAt
     })),
-    (data: any[]) => data.map(ma => ({
-      id: ma.id,
-      name: ma.name,
-      color: ma.color,
-      isActive: ma.is_active,
-      createdAt: ma.created_at,
-      updatedAt: ma.updated_at
+    (data: any[]) => data.map(item => ({
+      id: item.id,
+      name: item.name,
+      color: item.color,
+      isActive: item.is_active,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
     }))
   );
 }
 
 export function useSupabaseShifts(defaultValue: Shift[] = []) {
   return useSupabaseData(
-    'tempoShifts',
     defaultValue,
     TABLES.SHIFTS,
     (shifts: Shift[]) => shifts.map(s => ({
       id: s.id,
       provider_id: s.providerId,
-      clinic_type_id: s.clinicTypeId,
-      medical_assistant_ids: s.medicalAssistantIds,
-      title: s.title,
+      clinic_type_id: s.clinicTypeId || null,
+      medical_assistant_ids: s.medicalAssistantIds || [],
+      title: s.title || null,
       start_date: s.startDate,
       end_date: s.endDate,
-      start_time: s.startTime,
-      end_time: s.endTime,
+      start_time: s.startTime || null,
+      end_time: s.endTime || null,
       is_vacation: s.isVacation,
-      notes: s.notes,
+      notes: s.notes || null,
       color: s.color,
-      recurring_rule: s.recurringRule,
-      series_id: s.seriesId,
-      original_recurring_shift_id: s.originalRecurringShiftId,
-      is_exception_instance: s.isExceptionInstance,
-      exception_for_date: s.exceptionForDate,
+      recurring_rule: s.recurringRule || null,
+      series_id: s.seriesId || null,
+      original_recurring_shift_id: s.originalRecurringShiftId || null,
+      is_exception_instance: s.isExceptionInstance || false,
+      exception_for_date: s.exceptionForDate || null,
       created_at: s.createdAt,
-      updated_at: s.updatedAt,
-      created_by_user_id: s.createdByUserId
+      updated_at: s.updatedAt
     })),
-    (data: any[]) => data.map(s => ({
-      id: s.id,
-      providerId: s.provider_id,
-      clinicTypeId: s.clinic_type_id,
-      medicalAssistantIds: s.medical_assistant_ids,
-      title: s.title,
-      startDate: s.start_date,
-      endDate: s.end_date,
-      startTime: s.start_time,
-      endTime: s.end_time,
-      isVacation: s.is_vacation,
-      notes: s.notes,
-      color: s.color,
-      recurringRule: s.recurring_rule,
-      seriesId: s.series_id,
-      originalRecurringShiftId: s.original_recurring_shift_id,
-      isExceptionInstance: s.is_exception_instance,
-      exceptionForDate: s.exception_for_date,
-      createdAt: s.created_at,
-      updatedAt: s.updated_at,
-      createdByUserId: s.created_by_user_id
+    (data: any[]) => data.map(item => ({
+      id: item.id,
+      providerId: item.provider_id,
+      clinicTypeId: item.clinic_type_id,
+      medicalAssistantIds: item.medical_assistant_ids,
+      title: item.title,
+      startDate: item.start_date,
+      endDate: item.end_date,
+      startTime: item.start_time,
+      endTime: item.end_time,
+      isVacation: item.is_vacation,
+      notes: item.notes,
+      color: item.color,
+      recurringRule: item.recurring_rule,
+      seriesId: item.series_id,
+      originalRecurringShiftId: item.original_recurring_shift_id,
+      isExceptionInstance: item.is_exception_instance,
+      exceptionForDate: item.exception_for_date,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
     }))
   );
 }
 
+// User settings can still use localStorage since they're user-specific preferences
 export function useSupabaseUserSettings(defaultValue: UserSettings, userId?: string) {
+  // For now, we'll keep this simple and use localStorage
+  // In a full multi-user system, this would sync to Supabase
   const [settings, setSettings] = useState<UserSettings>(defaultValue);
-  const [localSettings, setLocalSettings] = useLocalStorage<UserSettings>('tempoUserSettings', defaultValue);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const isOnline = isSupabaseConfigured();
-
-  // Fetch settings from Supabase
-  const fetchSettings = useCallback(async () => {
-    if (!isOnline || !userId) return;
-
-    try {
-      setLoading(true);
-      const userSettings = await dbHelpers.getUserSettings(userId);
-      if (userSettings) {
-        setSettings(userSettings);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch settings');
-    } finally {
-      setLoading(false);
-    }
-  }, [isOnline, userId]);
-
-  // Update settings
-  const updateSettings = useCallback(async (newSettings: Partial<UserSettings>) => {
-    const updatedSettings = { ...settings, ...newSettings };
-
-    if (isOnline && userId) {
-      try {
-        setLoading(true);
-        await dbHelpers.saveUserSettings(userId, updatedSettings);
-        setSettings(updatedSettings);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save settings');
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setLocalSettings(updatedSettings);
-      setSettings(updatedSettings);
-    }
-  }, [isOnline, userId, settings, setLocalSettings]);
-
+  
   useEffect(() => {
-    if (isOnline && userId) {
-      fetchSettings();
-    } else {
-      setSettings(localSettings);
+    const stored = localStorage.getItem('tempoUserSettings');
+    if (stored) {
+      try {
+        setSettings(JSON.parse(stored));
+      } catch (e) {
+        console.error('Error parsing user settings:', e);
+      }
     }
-  }, [fetchSettings, isOnline, userId, localSettings]);
+  }, []);
+
+  const updateSettings = useCallback(async (newSettings: UserSettings) => {
+    setSettings(newSettings);
+    localStorage.setItem('tempoUserSettings', JSON.stringify(newSettings));
+  }, []);
 
   return {
-    settings: isOnline ? settings : localSettings,
-    updateSettings,
-    loading,
-    error,
-    isOnline
+    data: settings,
+    setData: updateSettings,
+    loading: false,
+    error: null,
+    refetch: async () => {},
+    isOnline: true
   };
 } 

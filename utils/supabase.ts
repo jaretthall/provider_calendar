@@ -112,6 +112,7 @@ export const dbHelpers = {
       throw new Error('Supabase not configured');
     }
     
+    console.log(`🔍 Fetching from table: ${table}, orderBy: ${orderBy}`);
     let query = supabase.from(table).select('*');
     
     if (orderBy) {
@@ -121,10 +122,16 @@ export const dbHelpers = {
     const { data, error } = await query;
     
     if (error) {
-      console.error(`Error fetching ${table}:`, error);
+      console.error(`❌ Error fetching ${table}:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw error;
     }
-    
+
+    console.log(`✅ Successfully fetched ${data?.length || 0} records from ${table}`);
     return data || [];
   },
 
@@ -248,23 +255,61 @@ export const testSupabaseConnection = async () => {
   }
 
   try {
-    // Test basic connection
-    const { data, error } = await supabase!.from('providers').select('count', { count: 'exact', head: true });
+    // Test database connection by checking if we can access the providers table
+    // This verifies both auth and database connectivity
+    const { data, error } = await supabase!
+      .from('providers')
+      .select('id')
+      .limit(1);
     
     if (error) {
+      // If we get an auth error, the API key or URL is wrong
+      if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+        return {
+          success: false,
+          error: 'Invalid Supabase API key - check your .env file',
+          details: error
+        };
+      }
+      
+      // If table doesn't exist, the schema hasn't been set up
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return {
+          success: false,
+          error: 'Database tables not found - please run the schema setup in Supabase SQL Editor',
+          details: error,
+          solution: 'Copy and paste the contents of supabase-schema.sql into your Supabase SQL Editor and run it'
+        };
+      }
+      
+      // Other database errors
       return {
         success: false,
-        error: error.message,
+        error: `Database error: ${error.message}`,
         details: error
       };
     }
 
+    // If we get here, everything is working perfectly
     return {
       success: true,
-      message: 'Supabase connection successful',
-      providersCount: data
+      message: 'Supabase connection and database access verified',
+      details: {
+        tablesAccessible: true,
+        recordsFound: data?.length || 0,
+        projectId: supabaseUrl.replace(/^https?:\/\/([^.]+)\..*/, '$1')
+      }
     };
   } catch (error: any) {
+    // If we get a network error or similar, the configuration might be wrong
+    if (error.message?.includes('fetch')) {
+      return {
+        success: false,
+        error: 'Unable to connect to Supabase - check your project URL',
+        details: error
+      };
+    }
+    
     return {
       success: false,
       error: error.message || 'Unknown connection error',

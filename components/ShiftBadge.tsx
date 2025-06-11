@@ -163,7 +163,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
       {...(isAdmin && !shift.isVacation ? listeners : {})} 
       onClick={handleClick}
       title={tooltipText}
-      className={`${baseClasses} h-full flex items-center justify-start text-[0.6rem] sm:text-xs font-semibold p-0.5 leading-none`}
+      className={`${baseClasses} h-full flex flex-col justify-center text-[0.6rem] sm:text-xs font-semibold p-0.5 leading-none`}
       aria-label={ariaLabelText}
       role="button" 
       tabIndex={0} 
@@ -173,9 +173,11 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
         }
       }}
     >
-      <span className="truncate flex-shrink min-w-0">{getInitials(provider?.name)}</span>
+      <div className="flex items-center justify-center w-full">
+        <span className="truncate flex-shrink min-w-0">{getInitials(provider?.name)}</span>
+      </div>
       {assignedMAs.length > 0 && (
-        <div className="flex items-center ml-1 space-x-0.5 flex-shrink-0">
+        <div className="flex items-center justify-center mt-0.5 space-x-0.5 flex-shrink-0">
           {assignedMAs.slice(0, MAX_MA_DISPLAY_MONTH).map(ma => (
             <div 
               key={ma.id}
