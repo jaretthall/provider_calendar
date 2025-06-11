@@ -81,7 +81,7 @@ export function useSupabaseData<T>(
     if (isOnline && supabaseTable) {
       fetchFromSupabase();
     }
-  }, [fetchFromSupabase, isOnline, supabaseTable]);
+  }, [isOnline, supabaseTable]); // Remove fetchFromSupabase from dependencies to prevent infinite loop
 
   // Update data function - works with both authenticated and anonymous users
   const updateData = useCallback(async (newData: T | ((prev: T) => T)) => {
