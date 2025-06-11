@@ -87,6 +87,9 @@
             background-color: #e5e7eb !important;
             color: #6b7280 !important;
         }
+        .provider-color-dot, .clinic-color-dot, .ma-color-dot {
+            border: 2px solid rgba(255,255,255,0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -136,7 +139,7 @@
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="text-sm font-medium text-white flex items-center">
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 6a3 3 0 11-6 0 3 3 0 616 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 616 0zM17 6a3 3 0 11-6 0 3 3 0 616 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 515 5v1H1v-1a5 5 0 515-5z"></path>
                             </svg>
                             Medical Assistants
                         </h4>
@@ -226,7 +229,7 @@
 
     <!-- Footer -->
     <div class="bg-gray-800 text-gray-300 py-2 px-4 text-xs text-center border-t border-gray-700">
-        <span>Clinica Provider Schedule - Static Viewer v1.0.7</span>
+        <span>Clinica Provider Schedule - Static Viewer v1.0.8</span>
         <span class="mx-2">•</span>
         <span id="connection-status">Connected to Supabase</span>
     </div>
@@ -237,6 +240,77 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncWhjbG5zbmRpd2RlY3h2Y3hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1ODQ4ODYsImV4cCI6MjA2NTE2MDg4Nn0.Q5KbeUgj4buVQL1SE4K1YB6cVpKf3MxNRAw0w-8Uzug';
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // CRITICAL FIX: Tailwind color class to hex color mapping
+        // This matches the dynamic app's color handling
+        const TAILWIND_COLOR_MAP = {
+          // Reds
+          'bg-red-500': '#ef4444',
+          'bg-red-600': '#dc2626',
+          // Oranges
+          'bg-orange-500': '#f97316',
+          'bg-orange-400': '#fb923c',
+          // Ambers
+          'bg-amber-500': '#f59e0b',
+          'bg-amber-400': '#fbbf24',
+          // Yellows
+          'bg-yellow-500': '#eab308',
+          'bg-yellow-400': '#facc15',
+          // Limes
+          'bg-lime-500': '#84cc16',
+          'bg-lime-600': '#65a30d',
+          // Greens
+          'bg-green-500': '#22c55e',
+          'bg-green-600': '#16a34a',
+          // Emeralds
+          'bg-emerald-500': '#10b981',
+          'bg-emerald-400': '#34d399',
+          // Teals
+          'bg-teal-500': '#14b8a6',
+          'bg-teal-600': '#0d9488',
+          // Cyans
+          'bg-cyan-500': '#06b6d4',
+          'bg-cyan-400': '#22d3ee',
+          // Skies
+          'bg-sky-500': '#0ea5e9',
+          'bg-sky-600': '#0284c7',
+          // Blues
+          'bg-blue-500': '#3b82f6',
+          'bg-blue-600': '#2563eb',
+          // Indigos
+          'bg-indigo-500': '#6366f1',
+          'bg-indigo-400': '#818cf8',
+          // Violets
+          'bg-violet-500': '#8b5cf6',
+          'bg-violet-600': '#7c3aed',
+          // Purples
+          'bg-purple-500': '#a855f7',
+          'bg-purple-600': '#9333ea',
+          // Fuchsias
+          'bg-fuchsia-500': '#d946ef',
+          'bg-fuchsia-400': '#e879f9',
+          // Pinks
+          'bg-pink-500': '#ec4899',
+          'bg-pink-400': '#f472b6',
+          // Roses
+          'bg-rose-500': '#f43f5e',
+          'bg-rose-400': '#fb7185',
+          // Grays/Neutrals
+          'bg-slate-500': '#64748b',
+          'bg-gray-500': '#6b7280',
+          'bg-gray-600': '#4b5563'
+        };
+
+        // Convert Tailwind color class to actual hex value
+        function getActualColor(colorClass) {
+            // If it's already a hex color, return as-is
+            if (colorClass && colorClass.startsWith('#')) {
+                return colorClass;
+            }
+            
+            // Convert Tailwind class to hex
+            return TAILWIND_COLOR_MAP[colorClass] || '#6b7280'; // Default gray if not found
+        }
 
         // Global state
         let currentDate = new Date();
@@ -262,7 +336,9 @@
                 initializeFilters();
                 renderCalendar();
                 hideLoading();
+                console.log('✅ Static viewer loaded successfully with color mapping');
             } catch (error) {
+                console.error('❌ Error loading static viewer:', error);
                 showError(error.message);
             }
         }
@@ -286,13 +362,20 @@
             allData.medicalAssistants = masRes.data || [];
             allData.shifts = shiftsRes.data || [];
 
+            console.log('📊 Data loaded:', {
+                providers: allData.providers.length,
+                clinicTypes: allData.clinicTypes.length, 
+                medicalAssistants: allData.medicalAssistants.length,
+                shifts: allData.shifts.length
+            });
+
             // Initialize all filters as enabled
             allData.providers.forEach(p => filters.providers.add(p.id));
             allData.medicalAssistants.forEach(ma => filters.medicalAssistants.add(ma.id));
             allData.clinicTypes.forEach(ct => filters.clinicTypes.add(ct.id));
         }
 
-        // Initialize filter UI
+        // Initialize filter UI with proper color display
         function initializeFilters() {
             // Setup vacation filter
             document.getElementById('show-vacations').addEventListener('change', (e) => {
@@ -300,32 +383,32 @@
                 renderCalendar();
             });
 
-            // Render provider filters
+            // Render provider filters with color dots
             const providersContainer = document.getElementById('providers-list');
             providersContainer.innerHTML = allData.providers.map(provider => `
                 <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
                     <input type="checkbox" checked onchange="toggleProvider('${provider.id}')" class="rounded text-blue-400">
-                    <div class="w-3 h-3 rounded-full" style="background-color: ${provider.color}"></div>
+                    <div class="w-4 h-4 rounded-full provider-color-dot" style="background-color: ${getActualColor(provider.color)}"></div>
                     <span class="text-sm text-gray-200 flex-1">${provider.name}</span>
                 </label>
             `).join('');
 
-            // Render medical assistant filters
+            // Render medical assistant filters with color dots
             const masContainer = document.getElementById('medical-assistants-list');
             masContainer.innerHTML = allData.medicalAssistants.map(ma => `
                 <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
                     <input type="checkbox" checked onchange="toggleMA('${ma.id}')" class="rounded text-blue-400">
-                    <div class="w-3 h-3 rounded-full" style="background-color: ${ma.color}"></div>
+                    <div class="w-4 h-4 rounded-full ma-color-dot" style="background-color: ${getActualColor(ma.color)}"></div>
                     <span class="text-sm text-gray-200 flex-1">${ma.name}</span>
                 </label>
             `).join('');
 
-            // Render clinic type filters
+            // Render clinic type filters with color dots
             const clinicsContainer = document.getElementById('clinic-types-list');
             clinicsContainer.innerHTML = allData.clinicTypes.map(clinic => `
                 <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
                     <input type="checkbox" checked onchange="toggleClinic('${clinic.id}')" class="rounded text-blue-400">
-                    <div class="w-3 h-3 rounded-full" style="background-color: ${clinic.color}"></div>
+                    <div class="w-4 h-4 rounded-full clinic-color-dot" style="background-color: ${getActualColor(clinic.color)}"></div>
                     <span class="text-sm text-gray-200 flex-1">${clinic.name}</span>
                 </label>
             `).join('');
@@ -502,7 +585,7 @@
                 
                 html += `
                     <div class="shift-badge text-white" 
-                         style="background-color: ${provider?.color || '#6B7280'}"
+                         style="background-color: ${getActualColor(provider?.color || 'bg-gray-500')}"
                          onmouseenter="showTooltip(event, '${tooltipText.replace(/'/g, '&apos;')}')"
                          onmouseleave="hideTooltip()">
                         ${getInitials(provider?.name || '??')}${mas.length > 0 ? mas.map(ma => `<span class="ma-badge">${getInitials(ma.name)}</span>`).join('') : ''}
@@ -714,7 +797,7 @@
                 
                 return `
                     <div class="shift-badge text-white text-xs mb-1" 
-                         style="background-color: ${provider?.color || '#6B7280'}"
+                         style="background-color: ${getActualColor(provider?.color || 'bg-gray-500')}"
                          onmouseenter="showTooltip(event, '${tooltipText.replace(/'/g, '&apos;')}')"
                          onmouseleave="hideTooltip()">
                         ${getInitials(provider?.name || '??')} ${mas.map(ma => ma.name).join(', ')}

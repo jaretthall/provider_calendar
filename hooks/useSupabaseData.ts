@@ -537,41 +537,55 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
       setError(null);
       console.log('💾 Updating shifts in Supabase');
 
-      // Transform to Supabase format
-      const supabaseShifts = shiftsToSet.map(s => ({
-        id: s.id,
-        provider_id: s.providerId,
-        clinic_type_id: s.clinicTypeId || null,
-        medical_assistant_ids: s.medicalAssistantIds || [],
-        title: s.title || null,
-        start_date: s.startDate,
-        end_date: s.endDate,
-        start_time: s.startTime || null,
-        end_time: s.endTime || null,
-        is_vacation: s.isVacation,
-        notes: s.notes || null,
-        color: s.color,
-        recurring_rule: s.recurringRule || null,
-        series_id: s.seriesId || null,
-        original_recurring_shift_id: s.originalRecurringShiftId || null,
-        is_exception_instance: s.isExceptionInstance || false,
-        exception_for_date: s.exceptionForDate || null,
-        created_at: s.createdAt,
-        updated_at: s.updatedAt
-      }));
+      // CRITICAL FIX: Only upsert shifts that have actually changed
+      // Find which shifts are new or different from current data
+      const changedShifts = shiftsToSet.filter(newShift => {
+        const existingShift = data.find(s => s.id === newShift.id);
+        if (!existingShift) return true; // New shift
+        
+        // Check if shift has actually changed
+        return JSON.stringify(existingShift) !== JSON.stringify(newShift);
+      });
 
-      // Use upsert instead of delete-all-insert
-      const { error: upsertError } = await supabase!
-        .from(TABLES.SHIFTS)
-        .upsert(supabaseShifts, { onConflict: 'id' });
+      console.log(`📊 Upserting ${changedShifts.length} changed shifts out of ${shiftsToSet.length} total`);
 
-      if (upsertError) throw upsertError;
+      if (changedShifts.length > 0) {
+        // Transform only changed shifts to Supabase format
+        const supabaseShifts = changedShifts.map(s => ({
+          id: s.id,
+          provider_id: s.providerId,
+          clinic_type_id: s.clinicTypeId || null,
+          medical_assistant_ids: s.medicalAssistantIds || [],
+          title: s.title || null,
+          start_date: s.startDate,
+          end_date: s.endDate,
+          start_time: s.startTime || null,
+          end_time: s.endTime || null,
+          is_vacation: s.isVacation,
+          notes: s.notes || null,
+          color: s.color,
+          recurring_rule: s.recurringRule || null,
+          series_id: s.seriesId || null,
+          original_recurring_shift_id: s.originalRecurringShiftId || null,
+          is_exception_instance: s.isExceptionInstance || false,
+          exception_for_date: s.exceptionForDate || null,
+          created_at: s.createdAt,
+          updated_at: s.updatedAt
+        }));
 
+        // Use upsert for only the changed shifts
+        const { error: upsertError } = await supabase!
+          .from(TABLES.SHIFTS)
+          .upsert(supabaseShifts, { onConflict: 'id' });
+
+        if (upsertError) throw upsertError;
+      }
+
+      // Update local state immediately (no refetch needed)
       setData(shiftsToSet);
       console.log('✅ Successfully updated shifts');
       
-      // Refetch to ensure consistency
-      await fetchShifts();
+      // REMOVED: await fetchShifts(); - This was causing the duplication bug!
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update shifts';
       setError(errorMessage);
@@ -580,7 +594,75 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
     } finally {
       setLoading(false);
     }
-  }, [isOnline, data, fetchShifts]);
+  }, [isOnline, data]); // REMOVED fetchShifts from dependencies
+
+  // Add proper delete function for individual shifts
+  const deleteShift = useCallback(async (shiftId: string) => {
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🗑️ Deleting shift:', shiftId);
+
+      // Delete from Supabase
+      const { error: deleteError } = await supabase!
+        .from(TABLES.SHIFTS)
+        .delete()
+        .eq('id', shiftId);
+
+      if (deleteError) throw deleteError;
+
+      // Update local state immediately (remove the deleted shift)
+      setData(prev => prev.filter(s => s.id !== shiftId));
+      console.log('✅ Successfully deleted shift');
+      
+      // No refetch needed - local state is already updated
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete shift';
+      setError(errorMessage);
+      console.error('❌ Error deleting shift:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Delete multiple shifts (for recurring series)
+  const deleteShifts = useCallback(async (shiftIds: string[]) => {
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🗑️ Deleting shifts:', shiftIds.length);
+
+      // Delete from Supabase
+      const { error: deleteError } = await supabase!
+        .from(TABLES.SHIFTS)
+        .delete()
+        .in('id', shiftIds);
+
+      if (deleteError) throw deleteError;
+
+      // Update local state immediately (remove the deleted shifts)
+      setData(prev => prev.filter(s => !shiftIds.includes(s.id)));
+      console.log('✅ Successfully deleted shifts');
+      
+      // No refetch needed - local state is already updated
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete shifts';
+      setError(errorMessage);
+      console.error('❌ Error deleting shifts:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
 
   // Initial fetch
   useEffect(() => {
@@ -592,6 +674,8 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
   return {
     data,
     setData: updateShifts,
+    deleteShift,
+    deleteShifts,
     loading,
     error,
     refetch: fetchShifts,

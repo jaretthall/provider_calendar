@@ -151,7 +151,7 @@ const MainApplication: React.FC = () => {
     useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
   const { data: medicalAssistants, setData: setMedicalAssistants, loading: masLoading, error: masError } = 
     useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
-  const { data: shifts, setData: setShifts, loading: shiftsLoading, error: shiftsError } = 
+  const { data: shifts, setData: setShifts, deleteShift: deleteShiftFromDb, deleteShifts: deleteShiftsFromDb, loading: shiftsLoading, error: shiftsError } = 
     useSupabaseShifts(INITIAL_SHIFTS);
   
   // Connection status testing
@@ -341,9 +341,23 @@ const MainApplication: React.FC = () => {
       return;
     }
 
-    setProviders(prev => prev.filter(p => p.id !== providerId));
-    setShifts(prev => prev.filter(s => s.providerId !== providerId));
-    addToast('Provider deleted successfully.', 'success');
+    try {
+      // Find all shifts for this provider and delete them from database
+      const providerShiftIds = shifts
+        .filter(s => s.providerId === providerId)
+        .map(s => s.id);
+      
+      if (providerShiftIds.length > 0) {
+        await deleteShiftsFromDb(providerShiftIds);
+      }
+      
+      // Update local state for providers
+      setProviders(prev => prev.filter(p => p.id !== providerId));
+      addToast('Provider and associated shifts deleted successfully.', 'success');
+    } catch (error) {
+      console.error('Error deleting provider:', error);
+      addToast(`Error deleting provider: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const getProviderById = (id: string) => providers.find(p => p.id === id);
@@ -380,9 +394,28 @@ const MainApplication: React.FC = () => {
 
   const deleteClinicType = async (clinicId: string) => {
     const clinicName = clinics.find(c => c.id === clinicId)?.name || 'Unknown Clinic';
-    setClinics(prev => prev.filter(c => c.id !== clinicId));
-    setShifts(prev => prev.map(s => s.clinicTypeId === clinicId ? { ...s, clinicTypeId: undefined, title: `${getProviderById(s.providerId)?.name} @ N/A` } : s));
-    addToast(`Clinic Type "${clinicName}" deleted and unassigned from shifts.`, 'success');
+    
+    try {
+      // Update shifts that use this clinic type - set clinicTypeId to undefined
+      const affectedShifts = shifts
+        .filter(s => s.clinicTypeId === clinicId)
+        .map(s => ({
+          ...s,
+          clinicTypeId: undefined,
+          title: `${getProviderById(s.providerId)?.name} @ N/A`,
+          updatedAt: new Date().toISOString()
+        }));
+      
+      if (affectedShifts.length > 0) {
+        await setShifts([...affectedShifts, ...shifts.filter(s => s.clinicTypeId !== clinicId)]);
+      }
+      
+      setClinics(prev => prev.filter(c => c.id !== clinicId));
+      addToast(`Clinic Type "${clinicName}" deleted and unassigned from shifts.`, 'success');
+    } catch (error) {
+      console.error('Error deleting clinic type:', error);
+      addToast(`Error deleting clinic type: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const addMedicalAssistant = async (maData: Omit<MedicalAssistant, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -510,15 +543,28 @@ const MainApplication: React.FC = () => {
     const shiftToDelete = getShiftById(shiftId);
     if (!shiftToDelete) { addToast("Shift not found to delete.", "error"); return; }
 
-    if (deleteAllOccurrences && seriesIdToDelete) {
-        setShifts(prev => prev.filter(s => s.seriesId !== seriesIdToDelete && s.id !== seriesIdToDelete)); // also remove the base shift
+    try {
+      if (deleteAllOccurrences && seriesIdToDelete) {
+        // Find all shifts in the series (including base shift and exceptions)
+        const seriesShiftIds = shifts
+          .filter(s => s.seriesId === seriesIdToDelete || s.id === seriesIdToDelete)
+          .map(s => s.id);
+        
+        await deleteShiftsFromDb(seriesShiftIds);
         addToast(`Recurring series and all its occurrences/exceptions deleted.`, 'success');
-    } else if (shiftToDelete.isExceptionInstance) {
-        setShifts(prev => prev.filter(s => s.id !== shiftId));
-        addToast(`Shift exception for ${shiftToDelete.exceptionForDate} deleted.`, 'success');
-    } else { 
-        setShifts(prev => prev.filter(s => s.id !== shiftId)); 
-        addToast(`Shift "${shiftToDelete.title || shiftId}" deleted.`, 'success');
+      } else {
+        // Delete single shift
+        await deleteShiftFromDb(shiftId);
+        
+        if (shiftToDelete.isExceptionInstance) {
+          addToast(`Shift exception for ${shiftToDelete.exceptionForDate} deleted.`, 'success');
+        } else { 
+          addToast(`Shift "${shiftToDelete.title || shiftId}" deleted.`, 'success');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      addToast(`Error deleting shift: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
