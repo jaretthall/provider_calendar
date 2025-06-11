@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     plugins: [],
     
     // Base path for GitHub Pages (repository name)
-    base: isProduction ? '/Calendar/' : '/',
+    base: isProduction ? '/provider_calendar/' : '/',
     // Environment variables
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),

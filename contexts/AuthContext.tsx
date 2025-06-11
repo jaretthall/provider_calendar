@@ -21,29 +21,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { addToast } = toastContext;
 
   useEffect(() => {
-    // Initialize authentication state
+    // Initialize authentication state (auto-authenticate in anonymous mode)
     initializeAuth();
 
-    // Listen for auth state changes only if Supabase is configured
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event, session?.user?.id);
-          
-          if (event === 'SIGNED_IN' && session?.user) {
-            await loadUserProfile(session.user.id);
-          } else if (event === 'SIGNED_OUT') {
-            handleSignOut();
-          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-            await loadUserProfile(session.user.id);
-          }
-        }
-      );
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
+    // QUICK FIX: Disable auth state listener since we're using anonymous access
+    console.log('Running in anonymous mode - auth state listener disabled');
   }, []);
 
   const initializeAuth = async () => {
@@ -55,13 +37,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      // QUICK FIX: Auto-authenticate without requiring login
+      console.log('Auto-authenticating without login (anonymous mode)...');
       
-      if (session?.user) {
-        await loadUserProfile(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
+      // Create a mock admin user for anonymous access
+      const mockUser: User = {
+        id: 'anonymous-admin',
+        email: 'admin@clinica.local',
+        role: UserRole.ADMIN,
+        firstName: 'Anonymous',
+        lastName: 'Admin',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setUser(mockUser);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      
+      console.log('Auto-authentication complete - user has admin access');
+      addToast('Application loaded successfully', 'success');
+      
     } catch (error) {
       console.error('Error initializing auth:', error);
       addToast('Error connecting to authentication service', 'error');
