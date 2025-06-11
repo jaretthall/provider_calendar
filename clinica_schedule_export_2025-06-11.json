@@ -1,0 +1,165 @@
+{
+  "providers": [
+    {
+      "id": "prov2",
+      "name": "Philip Sutherland",
+      "color": "bg-yellow-400",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:52:22.644Z",
+      "updatedAt": "2025-06-08T19:23:15.747Z"
+    },
+    {
+      "id": "prov3",
+      "name": "Julia Friederich",
+      "color": "bg-blue-500",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:52:22.644Z",
+      "updatedAt": "2025-06-09T01:10:59.328Z"
+    },
+    {
+      "id": "e1038770-1388-48c7-94cc-5c0bf8858f9c",
+      "name": "Kelly Arnold",
+      "color": "bg-orange-400",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:54:45.739Z",
+      "updatedAt": "2025-06-08T19:24:16.716Z"
+    },
+    {
+      "id": "87be6a08-213c-4a40-a702-2f2287d32d10",
+      "name": "John Pound",
+      "color": "bg-teal-600",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:54:53.365Z",
+      "updatedAt": "2025-06-08T19:23:59.660Z"
+    },
+    {
+      "id": "8f791bb6-25a0-4005-9994-2466d6113359",
+      "name": "Heidi Kelly",
+      "color": "bg-emerald-400",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:55:13.293Z",
+      "updatedAt": "2025-06-08T19:24:32.759Z"
+    },
+    {
+      "id": "2a868e2f-e53f-4f12-acf2-a524f2a3d19b",
+      "name": "Jim Knox",
+      "color": "bg-slate-500",
+      "isActive": true,
+      "createdAt": "2025-06-08T19:24:46.904Z",
+      "updatedAt": "2025-06-08T19:24:46.904Z"
+    },
+    {
+      "id": "a8f02578-8096-456e-a7cc-d8afb5b8a649",
+      "name": "Izzy Swaggerty",
+      "color": "bg-fuchsia-400",
+      "isActive": true,
+      "createdAt": "2025-06-08T19:25:03.916Z",
+      "updatedAt": "2025-06-08T19:25:03.916Z"
+    },
+    {
+      "id": "7259ac59-a651-49ac-b104-b23a9eae467d",
+      "name": "Bibiana Garcia",
+      "color": "bg-fuchsia-500",
+      "isActive": true,
+      "createdAt": "2025-06-08T19:26:36.665Z",
+      "updatedAt": "2025-06-09T00:31:46.575Z"
+    },
+    {
+      "id": "6ec5142d-89c9-4256-bd8d-147f8d40a2a3",
+      "name": "Joy Ferro",
+      "color": "bg-rose-500",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:32:27.757Z",
+      "updatedAt": "2025-06-09T00:32:27.757Z"
+    },
+    {
+      "id": "9e96bded-2580-4b0c-be5d-b5eff14f67a4",
+      "name": "Ludjelie Manigat",
+      "color": "bg-lime-500",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:33:09.058Z",
+      "updatedAt": "2025-06-09T00:33:09.058Z"
+    },
+    {
+      "id": "b996b0a3-51aa-4495-9207-731cd34dbccb",
+      "name": "Tiffany Good",
+      "color": "bg-cyan-400",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:40:46.512Z",
+      "updatedAt": "2025-06-09T00:40:46.512Z"
+    }
+  ],
+  "clinics": [
+    {
+      "id": "clinic1",
+      "name": "Clinica Centro",
+      "color": "bg-red-600",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:52:22.644Z",
+      "updatedAt": "2025-06-09T00:26:40.597Z"
+    },
+    {
+      "id": "clinic2",
+      "name": "Urgente",
+      "color": "bg-amber-400",
+      "isActive": true,
+      "createdAt": "2025-06-08T16:52:22.644Z",
+      "updatedAt": "2025-06-09T00:26:50.566Z"
+    }
+  ],
+  "medicalAssistants": [
+    {
+      "id": "ee792997-3cdf-491d-8503-1676c2bc034c",
+      "name": "Juan",
+      "color": "bg-blue-600",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:27:17.544Z",
+      "updatedAt": "2025-06-09T00:29:35.771Z"
+    },
+    {
+      "id": "277fe18d-474d-4f6a-9c79-cb680854b0d2",
+      "name": "Oscar",
+      "color": "bg-lime-600",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:27:38.434Z",
+      "updatedAt": "2025-06-09T00:29:20.863Z"
+    },
+    {
+      "id": "374bbe82-203c-4c40-b690-4576e4e673c8",
+      "name": "Lupita",
+      "color": "bg-purple-600",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:28:21.015Z",
+      "updatedAt": "2025-06-09T00:28:21.015Z"
+    },
+    {
+      "id": "6bc808d3-e63e-453f-b2c7-f7cf3a6d237c",
+      "name": "Maira",
+      "color": "bg-rose-400",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:28:34.922Z",
+      "updatedAt": "2025-06-09T00:28:34.922Z"
+    },
+    {
+      "id": "ef783fed-638b-4e62-84a2-bd60dc3369bd",
+      "name": "Quiana",
+      "color": "bg-cyan-400",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:28:53.172Z",
+      "updatedAt": "2025-06-09T00:28:53.172Z"
+    },
+    {
+      "id": "ab9e0cb9-485a-43dd-92cb-9fe60b779271",
+      "name": "Kenneth",
+      "color": "bg-lime-500",
+      "isActive": true,
+      "createdAt": "2025-06-09T00:29:04.581Z",
+      "updatedAt": "2025-06-09T00:29:04.581Z"
+    }
+  ],
+  "shifts": [],
+  "userSettings": {
+    "defaultCalendarView": "month",
+    "weekStartsOn": 0
+  }
+}

@@ -5,21 +5,26 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const isProduction = mode === 'production';
   const isDevelopment = mode === 'development';
+  const isGitHubPages = process.env.GITHUB_PAGES === 'true' || isProduction;
   
   return {
+    plugins: [],
+    
     // Base path for GitHub Pages (repository name)
-    base: isProduction ? '/provider_calendar/' : '/',
+    base: isProduction ? '/Calendar/' : '/',
     // Environment variables
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),
       __DEV__: isDevelopment,
       __PROD__: isProduction,
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://fgqhclnsndiwdecxvcxi.supabase.co'),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncWhjbG5zbmRpd2RlY3h2Y3hpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1ODQ4ODYsImV4cCI6MjA2NTE2MDg4Nn0.Q5KbeUgj4buVQL1SE4K1YB6cVpKf3MxNRAw0w-8Uzug'),
     },
     
     // Path resolution
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './'),
         '@components': path.resolve(__dirname, './components'),
         '@utils': path.resolve(__dirname, './utils'),
         '@hooks': path.resolve(__dirname, './hooks'),
@@ -45,7 +50,7 @@ export default defineConfig(({ mode }) => {
       target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge88'],
       
       // Chunk size warning limit (increased for healthcare app)
-      chunkSizeWarningLimit: 1500,
+      chunkSizeWarningLimit: 1000,
       
       // CSS code splitting
       cssCodeSplit: true,
@@ -126,7 +131,7 @@ export default defineConfig(({ mode }) => {
     
     // Preview server configuration
     preview: {
-      port: 4173,
+      port: 8080,
       host: true,
       open: false,
       cors: true
