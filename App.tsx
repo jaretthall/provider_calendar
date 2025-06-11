@@ -35,10 +35,10 @@ import Footer from './components/Footer';
 import { ToastContainer } from './components/Toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth, usePermissions } from './hooks/useAuth';
-import { isSupabaseConfigured } from './utils/supabase';
+import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
 import { 
-  Provider, ClinicType, Shift, User, UserRole, ToastMessage, 
-  AppContextType, AuthContextType, ModalContextType, ModalState, 
+  Provider, ClinicType, Shift, UserRole, ToastMessage, 
+  AppContextType, ModalContextType, ModalState, 
   FilterState, RecurringFrequency, MedicalAssistant, CalendarViewMode,
   UserSettings, SettingsContextType, ToastContextType
 } from './types';
@@ -47,6 +47,7 @@ import {
   PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR, INITIAL_USER_SETTINGS 
 } from './constants';
 import useLocalStorage from './hooks/useLocalStorage';
+
 import { 
   getMonthYearString, addMonths, getISODateString, getInitials, 
   getWeekRangeString, addDays as dateAddDays, getTodayInEasternTime,
@@ -131,7 +132,7 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 // Main application component (previously the main content of App)
 const MainApplication: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { canEdit } = usePermissions();
   const { addToast } = useContext(ToastContext)!;
   
@@ -140,6 +141,10 @@ const MainApplication: React.FC = () => {
   const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
   const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMAs', INITIAL_MEDICAL_ASSISTANTS);
   const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
+  
+  // Connection status testing
+  const [isOnline, setIsOnline] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [modalState, setModalState] = useState<ModalState>({ type: null, props: {} });
   const [currentDate, setCurrentDate] = useState<Date>(getTodayInEasternTime());
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(window.innerWidth >= 1024); 
@@ -155,9 +160,6 @@ const MainApplication: React.FC = () => {
     showVacations: true,
   });
 
-  // Legacy support for components that still expect isAdmin boolean
-  const isAdmin = canEdit;
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
@@ -166,6 +168,37 @@ const MainApplication: React.FC = () => {
   useEffect(() => {
     setCalendarViewMode(userSettings.defaultCalendarView);
   }, [userSettings.defaultCalendarView]);
+
+  // Test Supabase connection on mount
+  useEffect(() => {
+    const testConnection = async () => {
+      console.log('🔍 Testing Supabase connection...');
+      setIsCheckingConnection(true);
+      
+      try {
+        const result = await testSupabaseConnection();
+        console.log('🔍 Connection test result:', result);
+        
+        if (result.success) {
+          console.log('✅ Supabase connected successfully');
+          setIsOnline(true);
+          addToast('Connected to Supabase Database', 'success');
+        } else {
+          console.error('❌ Supabase connection failed:', result.error);
+          setIsOnline(false);
+          addToast(`Database connection failed: ${result.error}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ Error testing connection:', error);
+        setIsOnline(false);
+        addToast('Error testing database connection', 'error');
+      } finally {
+        setIsCheckingConnection(false);
+      }
+    };
+
+    testConnection();
+  }, [addToast]);
   
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setUserSettings(prev => ({...prev, ...newSettings}));
@@ -247,20 +280,7 @@ const MainApplication: React.FC = () => {
     }
   };
 
-  // Legacy authentication functions for backward compatibility
-  const login = (username: string, password: string): boolean => {
-    // This is for backward compatibility with existing components
-    // Real authentication is handled by AuthContext
-    return false;
-  };
 
-  const logout = () => {
-    // Legacy function - actual logout is handled by AuthContext
-  };
-
-  const setCurrentUserRole = (role: UserRole) => {
-    // Legacy function - roles are managed through Supabase now
-  };
 
   const addProvider = async (providerData: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!canEdit) {
@@ -474,7 +494,7 @@ const MainApplication: React.FC = () => {
     addToast('Shift updated.', 'success');
   };
 
-  const deleteShift = async (shiftId: string, seriesIdToDelete?: string, deleteAllOccurrences?: boolean, deleteInstanceDate?: string) => {
+  const deleteShift = async (shiftId: string, seriesIdToDelete?: string, deleteAllOccurrences?: boolean) => {
     const shiftToDelete = getShiftById(shiftId);
     if (!shiftToDelete) { addToast("Shift not found to delete.", "error"); return; }
 
@@ -1015,7 +1035,7 @@ const MainApplication: React.FC = () => {
                       )}
                     </div>
                   </main>
-                  <Footer />
+                  <Footer isOnline={isOnline} isCheckingConnection={isCheckingConnection} />
                 </div>
               </div>
 

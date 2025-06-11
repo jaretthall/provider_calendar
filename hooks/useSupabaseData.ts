@@ -107,13 +107,13 @@ export function useSupabaseData<T>(
         console.log(`📝 Writing ${supabaseItems.length} items to ${supabaseTable}`);
         
         // Clear all existing data and insert new data (single user owns all data)
-        await supabase
+        await supabase!
           .from(supabaseTable)
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
 
         if (supabaseItems.length > 0) {
-          const { error: insertError } = await supabase
+          const { error: insertError } = await supabase!
             .from(supabaseTable)
             .insert(supabaseItems);
           

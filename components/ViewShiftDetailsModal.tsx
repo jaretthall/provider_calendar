@@ -5,9 +5,7 @@ import { formatTime, getISODateString, getInitials } from '../utils/dateUtils';
 import { RECURRING_FREQUENCY_OPTIONS, DAYS_OF_WEEK } from '../constants';
 import EditIcon from './icons/EditIcon';
 import { usePermissions } from '../hooks/useAuth';
-import PencilIcon from './icons/PencilIcon';
 import TrashIcon from './icons/TrashIcon';
-import DuplicateIcon from './icons/DuplicateIcon';
 import { formatDateInEasternTime } from '../utils/dateUtils';
 
 

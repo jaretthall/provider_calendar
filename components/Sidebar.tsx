@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { AppContext, ModalContext, ToastContext } from '../App';
 import { Provider, ClinicType, FilterState, MedicalAssistant } from '../types';
 import { usePermissions } from '../hooks/useAuth';
-import { getInitials } from '../utils/dateUtils';
+
 import PlusIcon from './icons/PlusIcon';
 import EditIcon from './icons/EditIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -15,10 +15,7 @@ import BriefcaseIcon from './icons/BriefcaseIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import EyeIcon from './icons/EyeIcon';
 import EyeSlashIcon from './icons/EyeSlashIcon';
-import ChevronDownIcon from './icons/ChevronDownIcon';
-import MenuIcon from './icons/MenuIcon';
-import XIcon from './icons/XIcon';
-import PencilIcon from './icons/PencilIcon';
+
 
 interface SidebarProps {
   filters: FilterState;
@@ -101,8 +98,8 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
   if (!appContext || !modalContext || !toastContext) throw new Error("Context not found");
 
   const { providers, clinics, medicalAssistants, deleteProvider, deleteClinicType, deleteMedicalAssistant } = appContext;
-  const { getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext;
-  const { addToast } = toastContext;
+
+
   const { openModal } = modalContext;
   const { isAdmin } = usePermissions();
   
