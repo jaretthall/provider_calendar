@@ -37,6 +37,12 @@ import { AuthProvider } from './contexts/AuthContext';
 import { useAuth, usePermissions } from './hooks/useAuth';
 import { isSupabaseConfigured, testSupabaseConnection } from './utils/supabase';
 import { 
+  useSupabaseProviders, 
+  useSupabaseClinicTypes, 
+  useSupabaseMedicalAssistants, 
+  useSupabaseShifts 
+} from './hooks/useSupabaseData';
+import { 
   Provider, ClinicType, Shift, UserRole, ToastMessage, 
   AppContextType, ModalContextType, ModalState, 
   FilterState, RecurringFrequency, MedicalAssistant, CalendarViewMode,
@@ -137,10 +143,16 @@ const MainApplication: React.FC = () => {
   const { addToast } = useContext(ToastContext)!;
   
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('tempoUserSettings', INITIAL_USER_SETTINGS);
-  const [providers, setProviders] = useLocalStorage<Provider[]>('tempoProviders', INITIAL_PROVIDERS);
-  const [clinics, setClinics] = useLocalStorage<ClinicType[]>('tempoClinics', INITIAL_CLINIC_TYPES);
-  const [medicalAssistants, setMedicalAssistants] = useLocalStorage<MedicalAssistant[]>('tempoMAs', INITIAL_MEDICAL_ASSISTANTS);
-  const [shifts, setShifts] = useLocalStorage<Shift[]>('tempoShifts', INITIAL_SHIFTS);
+  
+  // Use Supabase hooks for main data instead of localStorage
+  const { data: providers, setData: setProviders, loading: providersLoading, error: providersError } = 
+    useSupabaseProviders(INITIAL_PROVIDERS);
+  const { data: clinics, setData: setClinics, loading: clinicsLoading, error: clinicsError } = 
+    useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
+  const { data: medicalAssistants, setData: setMedicalAssistants, loading: masLoading, error: masError } = 
+    useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
+  const { data: shifts, setData: setShifts, loading: shiftsLoading, error: shiftsError } = 
+    useSupabaseShifts(INITIAL_SHIFTS);
   
   // Connection status testing
   const [isOnline, setIsOnline] = useState(false);
@@ -295,7 +307,7 @@ const MainApplication: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    setProviders(prev => [...prev, newProvider]);
+    setProviders((prev: Provider[]) => [...prev, newProvider]);
     addToast(`Provider "${newProvider.name}" added successfully.`, 'success');
   };
 
@@ -305,7 +317,7 @@ const MainApplication: React.FC = () => {
       return;
     }
 
-    setProviders(prev => prev.map(p => 
+    setProviders((prev: Provider[]) => prev.map((p: Provider) => 
       p.id === updatedProvider.id 
         ? { ...updatedProvider, updatedAt: new Date().toISOString() }
         : p
@@ -313,7 +325,7 @@ const MainApplication: React.FC = () => {
 
     const shiftsToUpdate = shifts.filter(s => s.providerId === updatedProvider.id);
     if (shiftsToUpdate.length > 0) {
-      setShifts(prev => prev.map(s => 
+      setShifts((prev: Shift[]) => prev.map((s: Shift) => 
         s.providerId === updatedProvider.id 
           ? { ...s, color: s.isVacation ? VACATION_COLOR : updatedProvider.color, updatedAt: new Date().toISOString() }
           : s
