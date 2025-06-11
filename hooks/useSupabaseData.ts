@@ -157,6 +157,7 @@ export function useSupabaseProviders(defaultValue: Provider[] = []) {
       is_active: p.isActive,
       created_at: p.createdAt,
       updated_at: p.updatedAt
+      // Removed user_id field - doesn't exist in actual database schema
     })),
     (data: any[]) => data.map(item => ({
       id: item.id,
@@ -180,6 +181,7 @@ export function useSupabaseClinicTypes(defaultValue: ClinicType[] = []) {
       is_active: c.isActive,
       created_at: c.createdAt,
       updated_at: c.updatedAt
+      // Removed user_id field - doesn't exist in actual database schema
     })),
     (data: any[]) => data.map(item => ({
       id: item.id,
@@ -203,6 +205,7 @@ export function useSupabaseMedicalAssistants(defaultValue: MedicalAssistant[] = 
       is_active: ma.isActive,
       created_at: ma.createdAt,
       updated_at: ma.updatedAt
+      // Removed user_id field - doesn't exist in actual database schema
     })),
     (data: any[]) => data.map(item => ({
       id: item.id,
@@ -239,6 +242,7 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
       exception_for_date: s.exceptionForDate || null,
       created_at: s.createdAt,
       updated_at: s.updatedAt
+      // Removed user_id fields - they don't exist in the actual database schema
     })),
     (data: any[]) => data.map(item => ({
       id: item.id,
