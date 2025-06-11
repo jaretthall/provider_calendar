@@ -218,54 +218,137 @@ export function useSupabaseMedicalAssistants(defaultValue: MedicalAssistant[] = 
   );
 }
 
+// Special implementation for shifts that uses proper upsert instead of delete-all-insert
 export function useSupabaseShifts(defaultValue: Shift[] = []) {
-  return useSupabaseData(
-    defaultValue,
-    TABLES.SHIFTS,
-    (shifts: Shift[]) => shifts.map(s => ({
-      id: s.id,
-      provider_id: s.providerId,
-      clinic_type_id: s.clinicTypeId || null,
-      medical_assistant_ids: s.medicalAssistantIds || [],
-      title: s.title || null,
-      start_date: s.startDate,
-      end_date: s.endDate,
-      start_time: s.startTime || null,
-      end_time: s.endTime || null,
-      is_vacation: s.isVacation,
-      notes: s.notes || null,
-      color: s.color,
-      recurring_rule: s.recurringRule || null,
-      series_id: s.seriesId || null,
-      original_recurring_shift_id: s.originalRecurringShiftId || null,
-      is_exception_instance: s.isExceptionInstance || false,
-      exception_for_date: s.exceptionForDate || null,
-      created_at: s.createdAt,
-      updated_at: s.updatedAt
-      // Removed user_id fields - they don't exist in the actual database schema
-    })),
-    (data: any[]) => data.map(item => ({
-      id: item.id,
-      providerId: item.provider_id,
-      clinicTypeId: item.clinic_type_id,
-      medicalAssistantIds: item.medical_assistant_ids,
-      title: item.title,
-      startDate: item.start_date,
-      endDate: item.end_date,
-      startTime: item.start_time,
-      endTime: item.end_time,
-      isVacation: item.is_vacation,
-      notes: item.notes,
-      color: item.color,
-      recurringRule: item.recurring_rule,
-      seriesId: item.series_id,
-      originalRecurringShiftId: item.original_recurring_shift_id,
-      isExceptionInstance: item.is_exception_instance,
-      exceptionForDate: item.exception_for_date,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }))
-  );
+  const [data, setData] = useState<Shift[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch shifts from Supabase
+  const fetchShifts = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching shifts');
+      
+      const { data: shifts, error: fetchError } = await supabase!
+        .from(TABLES.SHIFTS)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedShifts = (shifts || []).map(item => ({
+        id: item.id,
+        providerId: item.provider_id,
+        clinicTypeId: item.clinic_type_id,
+        medicalAssistantIds: item.medical_assistant_ids || [],
+        title: item.title,
+        startDate: item.start_date,
+        endDate: item.end_date,
+        startTime: item.start_time,
+        endTime: item.end_time,
+        isVacation: item.is_vacation,
+        notes: item.notes,
+        color: item.color,
+        recurringRule: item.recurring_rule,
+        seriesId: item.series_id,
+        originalRecurringShiftId: item.original_recurring_shift_id,
+        isExceptionInstance: item.is_exception_instance,
+        exceptionForDate: item.exception_for_date,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedShifts);
+      console.log('✅ Successfully fetched shifts:', transformedShifts.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shifts';
+      setError(errorMessage);
+      console.error('❌ Error fetching shifts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update shifts with proper upsert logic
+  const updateShifts = useCallback(async (newShifts: Shift[] | ((prev: Shift[]) => Shift[])) => {
+    const shiftsToSet = typeof newShifts === 'function' 
+      ? newShifts(data)
+      : newShifts;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating shifts in Supabase');
+
+      // Transform to Supabase format
+      const supabaseShifts = shiftsToSet.map(s => ({
+        id: s.id,
+        provider_id: s.providerId,
+        clinic_type_id: s.clinicTypeId || null,
+        medical_assistant_ids: s.medicalAssistantIds || [],
+        title: s.title || null,
+        start_date: s.startDate,
+        end_date: s.endDate,
+        start_time: s.startTime || null,
+        end_time: s.endTime || null,
+        is_vacation: s.isVacation,
+        notes: s.notes || null,
+        color: s.color,
+        recurring_rule: s.recurringRule || null,
+        series_id: s.seriesId || null,
+        original_recurring_shift_id: s.originalRecurringShiftId || null,
+        is_exception_instance: s.isExceptionInstance || false,
+        exception_for_date: s.exceptionForDate || null,
+        created_at: s.createdAt,
+        updated_at: s.updatedAt
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.SHIFTS)
+        .upsert(supabaseShifts, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(shiftsToSet);
+      console.log('✅ Successfully updated shifts');
+      
+      // Refetch to ensure consistency
+      await fetchShifts();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update shifts';
+      setError(errorMessage);
+      console.error('❌ Error updating shifts:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchShifts]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchShifts();
+    }
+  }, [isOnline, fetchShifts]);
+
+  return {
+    data,
+    setData: updateShifts,
+    loading,
+    error,
+    refetch: fetchShifts,
+    isOnline
+  };
 }
 
 // User settings can still use localStorage since they're user-specific preferences
