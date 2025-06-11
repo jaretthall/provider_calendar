@@ -145,77 +145,325 @@ export function useSupabaseData<T>(
   };
 }
 
-// Specialized hooks for each data type
+// Updated providers hook with proper upsert logic
 export function useSupabaseProviders(defaultValue: Provider[] = []) {
-  return useSupabaseData(
-    defaultValue,
-    TABLES.PROVIDERS,
-    (providers: Provider[]) => providers.map(p => ({
-      id: p.id,
-      name: p.name,
-      color: p.color,
-      is_active: p.isActive,
-      created_at: p.createdAt,
-      updated_at: p.updatedAt
-      // Removed user_id field - doesn't exist in actual database schema
-    })),
-    (data: any[]) => data.map(item => ({
-      id: item.id,
-      name: item.name,
-      color: item.color,
-      isActive: item.is_active,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }))
-  );
+  const [data, setData] = useState<Provider[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch providers from Supabase
+  const fetchProviders = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching providers');
+      
+      const { data: providers, error: fetchError } = await supabase!
+        .from(TABLES.PROVIDERS)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedProviders = (providers || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedProviders);
+      console.log('✅ Successfully fetched providers:', transformedProviders.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch providers';
+      setError(errorMessage);
+      console.error('❌ Error fetching providers:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update providers with proper upsert logic
+  const updateProviders = useCallback(async (newProviders: Provider[] | ((prev: Provider[]) => Provider[])) => {
+    const providersToSet = typeof newProviders === 'function' 
+      ? newProviders(data)
+      : newProviders;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating providers in Supabase');
+
+      // Transform to Supabase format
+      const supabaseProviders = providersToSet.map(p => ({
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        is_active: p.isActive,
+        created_at: p.createdAt,
+        updated_at: p.updatedAt
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.PROVIDERS)
+        .upsert(supabaseProviders, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(providersToSet);
+      console.log('✅ Successfully updated providers');
+      
+      // Refetch to ensure consistency
+      await fetchProviders();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update providers';
+      setError(errorMessage);
+      console.error('❌ Error updating providers:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchProviders]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchProviders();
+    }
+  }, [isOnline, fetchProviders]);
+
+  return {
+    data,
+    setData: updateProviders,
+    loading,
+    error,
+    refetch: fetchProviders,
+    isOnline
+  };
 }
 
+// Updated clinic types hook with proper upsert logic
 export function useSupabaseClinicTypes(defaultValue: ClinicType[] = []) {
-  return useSupabaseData(
-    defaultValue,
-    TABLES.CLINIC_TYPES,
-    (clinics: ClinicType[]) => clinics.map(c => ({
-      id: c.id,
-      name: c.name,
-      color: c.color,
-      is_active: c.isActive,
-      created_at: c.createdAt,
-      updated_at: c.updatedAt
-      // Removed user_id field - doesn't exist in actual database schema
-    })),
-    (data: any[]) => data.map(item => ({
-      id: item.id,
-      name: item.name,
-      color: item.color,
-      isActive: item.is_active,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }))
-  );
+  const [data, setData] = useState<ClinicType[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch clinic types from Supabase
+  const fetchClinicTypes = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching clinic types');
+      
+      const { data: clinicTypes, error: fetchError } = await supabase!
+        .from(TABLES.CLINIC_TYPES)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedClinicTypes = (clinicTypes || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedClinicTypes);
+      console.log('✅ Successfully fetched clinic types:', transformedClinicTypes.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clinic types';
+      setError(errorMessage);
+      console.error('❌ Error fetching clinic types:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update clinic types with proper upsert logic
+  const updateClinicTypes = useCallback(async (newClinicTypes: ClinicType[] | ((prev: ClinicType[]) => ClinicType[])) => {
+    const clinicTypesToSet = typeof newClinicTypes === 'function' 
+      ? newClinicTypes(data)
+      : newClinicTypes;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating clinic types in Supabase');
+
+      // Transform to Supabase format
+      const supabaseClinicTypes = clinicTypesToSet.map(c => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        is_active: c.isActive,
+        created_at: c.createdAt,
+        updated_at: c.updatedAt
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.CLINIC_TYPES)
+        .upsert(supabaseClinicTypes, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(clinicTypesToSet);
+      console.log('✅ Successfully updated clinic types');
+      
+      // Refetch to ensure consistency
+      await fetchClinicTypes();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update clinic types';
+      setError(errorMessage);
+      console.error('❌ Error updating clinic types:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchClinicTypes]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchClinicTypes();
+    }
+  }, [isOnline, fetchClinicTypes]);
+
+  return {
+    data,
+    setData: updateClinicTypes,
+    loading,
+    error,
+    refetch: fetchClinicTypes,
+    isOnline
+  };
 }
 
+// Updated medical assistants hook with proper upsert logic
 export function useSupabaseMedicalAssistants(defaultValue: MedicalAssistant[] = []) {
-  return useSupabaseData(
-    defaultValue,
-    TABLES.MEDICAL_ASSISTANTS,
-    (medicalAssistants: MedicalAssistant[]) => medicalAssistants.map(ma => ({
-      id: ma.id,
-      name: ma.name,
-      color: ma.color,
-      is_active: ma.isActive,
-      created_at: ma.createdAt,
-      updated_at: ma.updatedAt
-      // Removed user_id field - doesn't exist in actual database schema
-    })),
-    (data: any[]) => data.map(item => ({
-      id: item.id,
-      name: item.name,
-      color: item.color,
-      isActive: item.is_active,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at
-    }))
-  );
+  const [data, setData] = useState<MedicalAssistant[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch medical assistants from Supabase
+  const fetchMedicalAssistants = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching medical assistants');
+      
+      const { data: medicalAssistants, error: fetchError } = await supabase!
+        .from(TABLES.MEDICAL_ASSISTANTS)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedMedicalAssistants = (medicalAssistants || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedMedicalAssistants);
+      console.log('✅ Successfully fetched medical assistants:', transformedMedicalAssistants.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch medical assistants';
+      setError(errorMessage);
+      console.error('❌ Error fetching medical assistants:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update medical assistants with proper upsert logic
+  const updateMedicalAssistants = useCallback(async (newMedicalAssistants: MedicalAssistant[] | ((prev: MedicalAssistant[]) => MedicalAssistant[])) => {
+    const medicalAssistantsToSet = typeof newMedicalAssistants === 'function' 
+      ? newMedicalAssistants(data)
+      : newMedicalAssistants;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating medical assistants in Supabase');
+
+      // Transform to Supabase format
+      const supabaseMedicalAssistants = medicalAssistantsToSet.map(ma => ({
+        id: ma.id,
+        name: ma.name,
+        color: ma.color,
+        is_active: ma.isActive,
+        created_at: ma.createdAt,
+        updated_at: ma.updatedAt
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.MEDICAL_ASSISTANTS)
+        .upsert(supabaseMedicalAssistants, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(medicalAssistantsToSet);
+      console.log('✅ Successfully updated medical assistants');
+      
+      // Refetch to ensure consistency
+      await fetchMedicalAssistants();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update medical assistants';
+      setError(errorMessage);
+      console.error('❌ Error updating medical assistants:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchMedicalAssistants]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchMedicalAssistants();
+    }
+  }, [isOnline, fetchMedicalAssistants]);
+
+  return {
+    data,
+    setData: updateMedicalAssistants,
+    loading,
+    error,
+    refetch: fetchMedicalAssistants,
+    isOnline
+  };
 }
 
 // Special implementation for shifts that uses proper upsert instead of delete-all-insert
