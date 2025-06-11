@@ -25,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({
   onNavigateToday, 
   onExportData 
 }) => {
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { canEdit } = usePermissions();
   const modalContext = useContext(ModalContext);
   
@@ -33,10 +33,6 @@ const Header: React.FC<HeaderProps> = ({
     throw new Error('ModalContext not found');
   }
   const { openModal } = modalContext;
-
-  const handleLogout = () => {
-    signOut();
-  };
 
   const viewModeButtonClasses = (isActive: boolean) => 
     `px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 ${
@@ -127,15 +123,9 @@ const Header: React.FC<HeaderProps> = ({
 
           {isAuthenticated ? (
             <div className="flex items-center space-x-2">
-              <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+              <span className="text-xs sm:text-sm text-gray-600">
                 {canEdit ? 'Admin' : 'User'} ({user?.email?.split('@')[0] || 'User'})
               </span>
-              <button
-                onClick={handleLogout}
-                className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-              >
-                Sign Out
-              </button>
             </div>
           ) : (
             <button
