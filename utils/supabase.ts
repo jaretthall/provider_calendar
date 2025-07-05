@@ -37,6 +37,12 @@ export const supabase: SupabaseClient<Database> | null =
       })
     : null;
 
+// Expose Supabase client to window for debugging purposes
+if (typeof window !== 'undefined' && supabase) {
+  (window as any).supabase = supabase;
+  console.log('🔧 Supabase client exposed to window.supabase for debugging');
+}
+
 // Database table names
 export const TABLES = {
   PROVIDERS: 'providers',

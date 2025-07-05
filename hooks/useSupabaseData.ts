@@ -489,30 +489,58 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
 
       if (fetchError) throw fetchError;
 
-      const transformedShifts = (shifts || []).map(item => ({
-        id: item.id,
-        providerId: item.provider_id,
-        clinicTypeId: item.clinic_type_id,
-        medicalAssistantIds: item.medical_assistant_ids || [],
-        title: item.title,
-        startDate: item.start_date,
-        endDate: item.end_date,
-        startTime: item.start_time,
-        endTime: item.end_time,
-        isVacation: item.is_vacation,
-        notes: item.notes,
-        color: item.color,
-        recurringRule: item.recurring_rule,
-        seriesId: item.series_id,
-        originalRecurringShiftId: item.original_recurring_shift_id,
-        isExceptionInstance: item.is_exception_instance,
-        exceptionForDate: item.exception_for_date,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
-      }));
+      console.log('📡 Raw shifts from database:', shifts?.length || 0);
+      
+      // Enhanced debugging - log each raw shift
+      if (shifts && shifts.length > 0) {
+        console.log('📊 Raw shifts data:');
+        shifts.forEach((shift, index) => {
+          console.log(`  ${index + 1}. ID: ${shift.id}, Provider: ${shift.provider_id}, Date: ${shift.start_date}, Time: ${shift.start_time}-${shift.end_time}`);
+        });
+      }
+
+      const transformedShifts = (shifts || []).map(item => {
+        const transformed = {
+          id: item.id,
+          providerId: item.provider_id,
+          clinicTypeId: item.clinic_type_id,
+          medicalAssistantIds: item.medical_assistant_ids || [],
+          title: item.title,
+          startDate: item.start_date,
+          endDate: item.end_date,
+          startTime: item.start_time,
+          endTime: item.end_time,
+          isVacation: item.is_vacation,
+          notes: item.notes,
+          color: item.color,
+          recurringRule: item.recurring_rule,
+          seriesId: item.series_id,
+          originalRecurringShiftId: item.original_recurring_shift_id,
+          isExceptionInstance: item.is_exception_instance,
+          exceptionForDate: item.exception_for_date,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
+        };
+        
+        // Debug transformation
+        console.log(`  🔄 Transformed shift ${item.id}: Provider ${item.provider_id} -> ${transformed.providerId}`);
+        return transformed;
+      });
 
       setData(transformedShifts);
-      console.log('✅ Successfully fetched shifts:', transformedShifts.length);
+      console.log('✅ Successfully fetched and transformed shifts:', transformedShifts.length);
+      
+      // Enhanced debugging - log each transformed shift
+      if (transformedShifts.length > 0) {
+        console.log('📊 Transformed shifts data:');
+        transformedShifts.forEach((shift, index) => {
+          console.log(`  ${index + 1}. ID: ${shift.id}, Provider: ${shift.providerId}, Date: ${shift.startDate}, Time: ${shift.startTime}-${shift.endTime}`);
+        });
+      }
+      
+      // Store for global debugging
+      (window as any).__DEBUG_SHIFTS__ = transformedShifts;
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch shifts';
       setError(errorMessage);
@@ -581,11 +609,36 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
         if (upsertError) throw upsertError;
       }
 
-      // Update local state immediately (no refetch needed)
+      // Update local state immediately
       setData(shiftsToSet);
-      console.log('✅ Successfully updated shifts');
+      console.log('✅ Successfully updated shifts in local state');
       
-      // REMOVED: await fetchShifts(); - This was causing the duplication bug!
+      // CRITICAL FIX: Verify database sync without full refetch
+      // This ensures React state stays in sync with database without causing duplicates
+      setTimeout(async () => {
+        try {
+          console.log('🔍 Verifying database synchronization...');
+          const { data: verifyShifts, error: verifyError } = await supabase!
+            .from(TABLES.SHIFTS)
+            .select('id, start_date, provider_id')
+            .order('created_at');
+            
+          if (!verifyError && verifyShifts) {
+            const dbCount = verifyShifts.length;
+            const localCount = shiftsToSet.length;
+            
+            if (dbCount !== localCount) {
+              console.warn(`⚠️  Database sync issue detected: DB has ${dbCount} shifts, local state has ${localCount} shifts`);
+              console.log('🔄 Re-fetching to synchronize...');
+              await fetchShifts();
+            } else {
+              console.log(`✅ Database sync verified: ${dbCount} shifts in both DB and local state`);
+            }
+          }
+        } catch (syncErr) {
+          console.warn('⚠️  Database sync verification failed:', syncErr);
+        }
+      }, 1000); // Delayed verification to allow database to process
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update shifts';
       setError(errorMessage);
@@ -671,6 +724,12 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
     }
   }, [isOnline, fetchShifts]);
 
+  // Force refresh function for debugging
+  const forceRefresh = useCallback(async () => {
+    console.log('🔄 Force refreshing shifts data...');
+    await fetchShifts();
+  }, [fetchShifts]);
+
   return {
     data,
     setData: updateShifts,
@@ -679,6 +738,7 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
     loading,
     error,
     refetch: fetchShifts,
+    forceRefresh,
     isOnline
   };
 }

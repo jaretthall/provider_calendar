@@ -7,48 +7,93 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .shift-badge {
-            transition: all 0.2s ease;
+        /* Day cell container setup for fixed bottom vacation bar */
+        .day-cell {
             position: relative;
+            min-height: 120px;
             display: flex;
+            flex-direction: column;
+            padding: 2px;
+        }
+
+        .day-shifts-container {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-content: flex-start;
+            padding-bottom: 24px; /* Space for vacation bar */
+        }
+
+        /* Square shift badges */
+        .shift-badge {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 22px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 3px 6px;
-            margin-bottom: 1px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+
         .shift-badge:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             z-index: 10;
         }
+
+        /* Provider initials in shift badge */
+        .provider-initials {
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        /* MA badge under provider initials */
+        .ma-badge {
+            background-color: rgba(0,0,0,0.2);
+            color: inherit;
+            font-size: 7px;
+            font-weight: 600;
+            padding: 1px 2px;
+            border-radius: 2px;
+            margin-top: 1px;
+            line-height: 1;
+            min-width: 12px;
+            text-align: center;
+        }
+
+        /* Vacation bar fixed at bottom */
         .vacation-bar {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            right: 2px;
             background-color: #dc2626 !important;
             color: white;
             font-weight: 600;
-            min-height: 18px;
-            border-radius: 2px;
-            margin-top: auto;
+            font-size: 9px;
+            min-height: 16px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
         }
+
         .filter-item {
             transition: all 0.2s ease;
         }
         .filter-item.disabled {
             opacity: 0.5;
         }
-        .ma-badge {
-            background-color: rgba(255,255,255,0.3);
-            color: inherit;
-            font-size: 9px;
-            padding: 1px 3px;
-            border-radius: 2px;
-            margin-left: 2px;
-            display: inline-block;
-        }
+
         .tooltip {
             position: absolute;
             background: rgba(0,0,0,0.95);
@@ -78,6 +123,7 @@
             border-style: solid;
             border-color: rgba(0,0,0,0.95) transparent transparent transparent;
         }
+
         /* Current view styling */
         .view-btn-active {
             background-color: #3b82f6 !important;
@@ -90,21 +136,710 @@
         .provider-color-dot, .clinic-color-dot, .ma-color-dot {
             border: 2px solid rgba(255,255,255,0.3);
         }
+
+        /* Text contrast helper for colored backgrounds */
+        .text-contrast-light {
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .text-contrast-dark {
+            color: #1f2937;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+        }
+
+        /* --- Sidebar spacing tweaks --- */
+        #providers-list label,
+        #medical-assistants-list label,
+        #clinic-types-list label {
+            padding: 4px 6px !important;
+            margin-bottom: 0px !important;
+            margin-top: 0px !important;
+            min-height: 0 !important;
+        }
+        #providers-list,
+        #medical-assistants-list,
+        #clinic-types-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px !important;
+        }
+        /* --- End sidebar tweaks --- */
+
+        /* Collapsible section styles */
+        .section-header {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            padding: 4px 6px;
+        }
+        .section-header:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .section-arrow {
+            transition: transform 0.2s ease;
+            display: inline-block;
+            margin-left: 4px;
+        }
+        .section-arrow.collapsed {
+            transform: rotate(-90deg);
+        }
+        .section-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .section-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        .section-content.expanded {
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        /* Add new styles for week view shift cards */
+        .week-day-col {
+            background: #fff;
+            min-height: 630px;
+            border-right: 1px solid #e5e7eb;
+            padding: 4px 4px 4px 4px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .week-day-col > .text-xs.text-gray-400.italic {
+            margin-top: 0;
+        }
+        .week-shift-card {
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+            margin-bottom: 6px;
+            padding: 7px 8px 6px 8px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+        }
+        .week-shift-card .shift-provider {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 1px;
+        }
+        .week-shift-card .shift-clinic {
+            font-size: 12px;
+            opacity: 0.93;
+        }
+        .week-shift-card .shift-time {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        .week-shift-card .shift-mas {
+            font-size: 11px;
+            opacity: 0.85;
+            margin-top: 1px;
+        }
+        .week-vacation-bar {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            right: 4px;
+            background: #dc2626;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            min-height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+        .week-view-header-cell {
+            background: #f9fafb;
+            text-align: center;
+            font-weight: 600;
+            font-size: 15px;
+            color: #4b5563;
+            border-bottom: 5px solid #e5e7eb;
+            padding: 4px 0 4px 0 !important;
+            line-height: 1;
+            min-height: 32px;
+            height: 32px;
+        }
+        .week-view-header-date {
+            font-size: 13px;
+            margin-top: 0.1em;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 1023px) {
+            .sidebar-mobile {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 50;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar-mobile.open {
+                transform: translateX(0);
+            }
+            .mobile-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+            .mobile-overlay.open {
+                opacity: 1;
+                visibility: visible;
+            }
+            .hamburger-btn {
+                display: block;
+                background: none;
+                border: none;
+                color: #374151;
+                cursor: pointer;
+                padding: 8px;
+                border-radius: 6px;
+                transition: background-color 0.2s;
+            }
+            .hamburger-btn:hover {
+                background-color: #f3f4f6;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .hamburger-btn {
+                display: none;
+            }
+            .sidebar-mobile {
+                position: static;
+                transform: none;
+                z-index: auto;
+            }
+        }
+
+        /* Mobile Calendar Optimizations - More like dynamic app */
+        @media (max-width: 768px) {
+            .day-cell {
+                min-height: 100px !important;
+                height: auto;
+                max-height: 140px;
+                padding: 4px !important;
+            }
+            .calendar-grid {
+                min-height: auto !important;
+            }
+            .shift-badge {
+                width: 40px !important;
+                height: 28px !important;
+                font-size: 10px !important;
+                border-radius: 4px !important;
+                margin: 1px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-weight: 600 !important;
+                color: white !important;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+            }
+            .provider-initials {
+                font-size: 10px !important;
+                font-weight: 600 !important;
+            }
+            .ma-badge {
+                display: none !important; /* Hide MA badges on mobile for cleaner look */
+            }
+            .week-shift-card {
+                padding: 5px 6px;
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+            .week-shift-card .shift-provider {
+                font-size: 11px;
+            }
+            .week-shift-card .shift-clinic {
+                font-size: 10px;
+            }
+            .week-shift-card .shift-time {
+                font-size: 9px;
+            }
+            .week-shift-card .shift-mas {
+                font-size: 9px;
+            }
+            .week-day-col {
+                min-height: 300px;
+                padding: 2px;
+            }
+            .week-view-header-cell {
+                font-size: 12px;
+                padding: 4px 0 1px 0 !important;
+                height: 28px;
+                min-height: 28px;
+            }
+            .week-view-header-date {
+                font-size: 11px;
+            }
+            /* Week view horizontal scroll on mobile */
+            .week-container {
+                overflow-x: auto;
+                min-width: 100%;
+            }
+            .week-grid {
+                min-width: 800px;
+            }
+            /* Remove spacer entirely on mobile */
+            .embed-spacer {
+                display: none !important;
+            }
+            
+            /* Compact header on mobile */
+            header {
+                padding: 8px 12px !important;
+                position: relative;
+                z-index: 10;
+                pointer-events: auto;
+            }
+            
+            #current-month {
+                font-size: 16px !important;
+                pointer-events: none; /* Prevent accidental clicks */
+            }
+            
+            /* More compact navigation buttons */
+            header button {
+                padding: 6px !important;
+                pointer-events: auto;
+                z-index: 11;
+                position: relative;
+            }
+            
+            /* Ensure navigation buttons work properly */
+            header .flex {
+                z-index: 11;
+                position: relative;
+            }
+            
+            .desktop-view-switcher {
+                display: none !important;
+            }
+            /* Mobile: Switch to List View Toggle */
+            .mobile-view-switcher {
+                display: flex !important;
+                gap: 4px;
+                margin-bottom: 8px;
+                background: white;
+                padding: 4px;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            
+            /* Mobile List View - Fixed height issues */
+            .mobile-list-view {
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+                padding: 8px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                height: calc(100vh - 120px);
+                max-height: none;
+                padding-bottom: 120px; /* Much more padding for safe scrolling */
+                scroll-behavior: smooth;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1;
+                background: #f9fafb;
+            }
+            
+            .mobile-list-view.active {
+                display: flex;
+            }
+            
+            .mobile-day-card {
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 12px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            
+            .mobile-day-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            
+            .mobile-shifts-list {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            
+            .mobile-shift-item {
+                display: flex;
+                align-items: center;
+                padding: 8px;
+                background: #f9fafb;
+                border-radius: 6px;
+                border-left: 4px solid;
+            }
+            
+            .mobile-shift-time {
+                font-size: 11px;
+                color: #6b7280;
+                min-width: 70px;
+            }
+            
+            .mobile-shift-provider {
+                font-weight: 600;
+                margin-right: 8px;
+            }
+            
+            .mobile-shift-details {
+                font-size: 12px;
+                color: #4b5563;
+            }
+            
+            /* Compact Calendar View for Mobile */
+            .mobile-calendar-compact {
+                display: none;
+            }
+            
+            .mobile-calendar-compact.active {
+                display: block;
+            }
+            
+            .mobile-calendar-compact .shift-badge {
+                width: 24px !important;
+                height: 24px !important;
+                font-size: 7px !important;
+            }
+            
+            .mobile-calendar-compact .provider-initials {
+                font-size: 8px !important;
+            }
+            
+            .mobile-calendar-compact .ma-badge {
+                font-size: 5px !important;
+                padding: 0px 1px !important;
+            }
+            
+            /* Day cell adjustments for compact view */
+            .mobile-calendar-compact .day-cell {
+                min-height: 60px !important;
+                padding: 1px !important;
+            }
+            
+            .mobile-calendar-compact .day-shifts-container {
+                gap: 1px !important;
+                padding-bottom: 12px !important;
+            }
+            
+            /* Make calendar grid more compact on mobile */
+            .mobile-calendar-compact .calendar-grid {
+                font-size: 12px !important;
+            }
+            
+            .mobile-calendar-compact .day-number {
+                font-size: 11px !important;
+            }
+            
+            /* Mobile Expandable Day Details */
+            .mobile-day-expanded {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: white;
+                z-index: 1000;
+                display: none;
+                flex-direction: column;
+                overflow-y: auto;
+            }
+            
+            .mobile-day-expanded.active {
+                display: flex;
+            }
+            
+            .mobile-day-expanded-header {
+                background: #f8fafc;
+                padding: 16px;
+                border-bottom: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .mobile-day-expanded-content {
+                flex: 1;
+                padding: 16px;
+            }
+            
+            /* Mobile Today/Tomorrow/This Week Quick Views */
+            .mobile-quick-views {
+                display: none;
+                flex-direction: column;
+                gap: 8px;
+                padding: 8px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                height: calc(100vh - 160px);
+                padding-bottom: 80px; /* Extra padding for safe scrolling */
+                scroll-behavior: smooth;
+            }
+            
+            .mobile-quick-views.active {
+                display: flex;
+            }
+            
+            .mobile-quick-view-section {
+                background: white;
+                border-radius: 8px;
+                padding: 12px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            
+            .mobile-quick-view-title {
+                font-weight: 600;
+                color: #1f2937;
+                margin-bottom: 8px;
+                font-size: 14px;
+            }
+            
+            /* Hide desktop elements on mobile */
+            .mobile-hidden {
+                display: none !important;
+            }
+        }
+        
+        /* Desktop: Hide mobile-specific elements */
+        @media (min-width: 769px) {
+            .mobile-view-switcher,
+            .mobile-list-view,
+            .mobile-quick-views,
+            .mobile-calendar-compact,
+            .mobile-day-expanded {
+                display: none !important;
+            }
+            
+            .desktop-view-switcher {
+                display: flex !important;
+            }
+        }
+        
+        /* Mobile: Hide desktop elements and show mobile switcher */
+        @media (max-width: 768px) {
+            .desktop-view-switcher {
+                display: none !important;
+            }
+            
+            .mobile-view-switcher {
+                display: flex !important;
+            }
+            
+            /* Ensure mobile content fills viewport properly */
+            .flex-1 {
+                height: calc(100vh - 140px) !important;
+                overflow: hidden !important;
+            }
+            
+            /* More compact mobile sections */
+            .mobile-quick-view-section {
+                background: white;
+                border-radius: 6px !important;
+                padding: 8px !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                margin-bottom: 8px !important;
+            }
+            
+            .mobile-quick-view-title {
+                font-weight: 600;
+                color: #1f2937;
+                margin-bottom: 6px !important;
+                font-size: 13px !important;
+            }
+            
+            .mobile-shift-item {
+                display: flex;
+                align-items: center;
+                padding: 6px !important;
+                background: #f9fafb;
+                border-radius: 4px !important;
+                border-left: 3px solid;
+                margin-bottom: 4px !important;
+            }
+            
+            .mobile-shift-time {
+                font-size: 10px !important;
+                color: #6b7280;
+                min-width: 60px !important;
+            }
+            
+            .mobile-shift-provider {
+                font-weight: 600;
+                margin-right: 6px !important;
+                font-size: 12px !important;
+            }
+            
+            .mobile-shift-details {
+                font-size: 11px !important;
+                color: #4b5563;
+            }
+            
+            .mobile-day-card {
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px !important;
+                padding: 8px !important;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                margin-bottom: 8px !important;
+            }
+            
+            .mobile-day-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 6px !important;
+                padding-bottom: 6px !important;
+                border-bottom: 1px solid #e5e7eb;
+            }
+            
+            /* Compact gaps */
+            .mobile-quick-views {
+                gap: 8px !important;
+                padding: 8px !important;
+            }
+            
+            .mobile-list-view {
+                gap: 6px !important;
+                padding: 8px !important;
+            }
+            
+            .mobile-shifts-list {
+                gap: 4px !important;
+            }
+        }
+        
+        /* Expandable day cards for calendar view */
+        .day-expandable {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .day-expandable:hover {
+            background-color: #f9fafb;
+        }
+        
+        .more-shifts-indicator {
+            position: absolute;
+            bottom: 20px;
+            right: 4px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        
+        /* Force mobile styles when class is applied */
+        .mobile-force .desktop-view-switcher {
+            display: none !important;
+        }
+        
+        .mobile-force #mobile-view-switcher {
+            display: flex !important;
+        }
+        
+        .mobile-force .flex-1 {
+            height: calc(100vh - 140px) !important;
+            overflow: hidden !important;
+        }
+        
+        /* Mobile view option buttons in sidebar */
+        .mobile-view-option-btn {
+            display: flex;
+            align-items: center;
+            space-x: 8px;
+            padding: 8px 12px;
+            text-align: left;
+            color: #d1d5db;
+            background: transparent;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .mobile-view-option-btn:hover {
+            background: #374151;
+            color: white;
+        }
+        
+        .mobile-view-option-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        
+        .mobile-view-option-btn svg {
+            margin-right: 8px;
+        }
+        
+        /* Hide mobile sidebar views on desktop */
+        @media (min-width: 769px) {
+            .mobile-sidebar-views {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleMobileSidebar()"></div>
+    
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div class="w-72 bg-gray-800 text-white shadow-lg border-r flex flex-col">
+        <div id="sidebar" class="w-72 bg-gray-800 text-white shadow-lg border-r flex flex-col sidebar-mobile">
             <!-- Sidebar Header -->
             <div class="p-3 border-b border-gray-700 bg-gray-900">
-                <div class="flex items-center space-x-2 mb-2">
-                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <h1 class="text-base font-bold">Clinica Provider Schedule</h1>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        <h1 class="text-base font-bold">Clinica Provider Schedule</h1>
+                    </div>
+                    <!-- Close button for mobile -->
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden text-gray-300 hover:text-white p-1 rounded" title="Close navigation menu">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
-                <span class="bg-green-600 text-white text-xs px-3 py-1 rounded font-medium">VIEWER ONLY</span>
+                <div class="mt-2">
+                    <span class="bg-green-600 text-white text-xs px-3 py-1 rounded font-medium">VIEWER ONLY</span>
+                </div>
             </div>
 
             <!-- Filters Section -->
@@ -112,24 +847,43 @@
                 <!-- View Options -->
                 <div>
                     <h4 class="text-xs font-medium text-gray-300 uppercase tracking-wide mb-2">View Options</h4>
-                    <label class="flex items-center space-x-2 text-sm text-gray-200 cursor-pointer">
+                    <label class="flex items-center space-x-2 text-sm text-gray-200 cursor-pointer mb-3">
                         <input type="checkbox" id="show-vacations" checked class="rounded text-blue-500">
                         <span>Show Vacations/Time-off</span>
                     </label>
+                    
+                    <!-- Mobile View Switcher in Sidebar -->
+                    <div class="mobile-sidebar-views">
+                        <div class="flex flex-col space-y-2">
+                            <button id="mobile-calendar-sidebar-btn" type="button" onclick="setMobileView('calendar')" class="mobile-view-option-btn active">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9H4V7z"></path>
+                                </svg>
+                                Calendar View
+                            </button>
+                            <button id="mobile-list-sidebar-btn" type="button" onclick="setMobileView('list')" class="mobile-view-option-btn">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 12a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 16a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"></path>
+                                </svg>
+                                List View
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Providers Section -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-sm font-medium text-white flex items-center">
+                        <h4 class="section-header text-sm font-medium text-white flex items-center" onclick="toggleSection('providers')">
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 616 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 515 5v1H1v-1a5 5 0 515-5z"></path>
                             </svg>
                             Providers
+                            <span class="section-arrow" id="providers-arrow">▼</span>
                         </h4>
                         <button onclick="toggleAllProviders()" class="text-xs text-blue-400 hover:text-blue-300">Toggle All</button>
                     </div>
-                    <div id="providers-list" class="space-y-1">
+                    <div id="providers-list" class="section-content expanded space-y-1">
                         <!-- Providers will be populated here -->
                     </div>
                 </div>
@@ -137,15 +891,16 @@
                 <!-- Medical Assistants Section -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-sm font-medium text-white flex items-center">
+                        <h4 class="section-header text-sm font-medium text-white flex items-center" onclick="toggleSection('medical-assistants')">
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M9 6a3 3 0 11-6 0 3 3 0 616 0zM17 6a3 3 0 11-6 0 3 3 0 616 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 515 5v1H1v-1a5 5 0 515-5z"></path>
                             </svg>
                             Medical Assistants
+                            <span class="section-arrow" id="medical-assistants-arrow">▼</span>
                         </h4>
                         <button onclick="toggleAllMAs()" class="text-xs text-blue-400 hover:text-blue-300">Toggle All</button>
                     </div>
-                    <div id="medical-assistants-list" class="space-y-1">
+                    <div id="medical-assistants-list" class="section-content expanded space-y-1">
                         <!-- Medical assistants will be populated here -->
                     </div>
                 </div>
@@ -153,15 +908,16 @@
                 <!-- Clinic Types Section -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <h4 class="text-sm font-medium text-white flex items-center">
+                        <h4 class="section-header text-sm font-medium text-white flex items-center" onclick="toggleSection('clinic-types')">
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
                             </svg>
                             Clinic Types
+                            <span class="section-arrow" id="clinic-types-arrow">▼</span>
                         </h4>
                         <button onclick="toggleAllClinics()" class="text-xs text-blue-400 hover:text-blue-300">Toggle All</button>
                     </div>
-                    <div id="clinic-types-list" class="space-y-1">
+                    <div id="clinic-types-list" class="section-content expanded space-y-1">
                         <!-- Clinic types will be populated here -->
                     </div>
                 </div>
@@ -170,29 +926,41 @@
 
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Spacer for embedding -->
+            <div class="embed-spacer" style="height: 110pt;"></div>
+            
             <!-- Header -->
             <header class="bg-white shadow-sm p-4 border-b">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-4">
+                        <!-- Mobile Hamburger Menu -->
+                        <button id="hamburger" onclick="toggleMobileSidebar()" class="hamburger-btn" title="Open navigation menu">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
                         <button onclick="navigateMonth(-1)" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Previous month">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                             </svg>
                         </button>
-                        <h2 id="current-month" class="text-xl font-semibold text-gray-800"></h2>
+                        <h2 id="current-month" class="text-lg sm:text-xl font-semibold text-gray-800"></h2>
                         <button onclick="navigateMonth(1)" class="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Next month">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                             </svg>
                         </button>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <div class="flex rounded-lg bg-gray-100 p-1">
-                            <button id="month-btn" onclick="setView('month')" class="px-3 py-1 text-sm font-medium view-btn-active rounded transition-colors">Month</button>
-                            <button id="week-btn" onclick="setView('week')" class="px-3 py-1 text-sm font-medium view-btn-inactive rounded transition-colors">Week</button>
-                            <button id="day-btn" onclick="setView('day')" class="px-3 py-1 text-sm font-medium view-btn-inactive rounded transition-colors">Day</button>
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <!-- Mobile View Switcher - REMOVED (now in sidebar) -->
+                        
+                        <!-- Desktop View Switcher -->
+                        <div class="desktop-view-switcher flex rounded-lg bg-gray-100 p-1">
+                            <button id="month-btn" onclick="setView('month')" class="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium view-btn-active rounded transition-colors">Month</button>
+                            <button id="week-btn" onclick="setView('week')" class="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium view-btn-inactive rounded transition-colors">Week</button>
+                            <button id="day-btn" onclick="setView('day')" class="px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium view-btn-inactive rounded transition-colors">Day</button>
                         </div>
-                        <button onclick="goToToday()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 font-medium transition-colors">Today</button>
+                        <button onclick="goToToday()" class="bg-blue-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-600 font-medium transition-colors text-xs sm:text-sm">Today</button>
                     </div>
                 </div>
             </header>
@@ -224,12 +992,32 @@
             <div id="calendar" class="hidden flex-1 overflow-auto bg-white">
                 <!-- Calendar will be populated by JavaScript -->
             </div>
+            
+            <!-- Mobile List View (Simplified) -->
+            <div id="mobile-list-view" class="mobile-list-view">
+                <!-- Day cards will be populated by JavaScript -->
+            </div>
+            
+            <!-- Mobile Day Expanded Modal -->
+            <div id="mobile-day-expanded" class="mobile-day-expanded">
+                <div class="mobile-day-expanded-header">
+                    <h3 id="mobile-expanded-date" class="text-lg font-semibold"></h3>
+                    <button onclick="closeMobileDayExpanded()" class="text-gray-500 hover:text-gray-700" title="Close day details">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div id="mobile-expanded-content" class="mobile-day-expanded-content">
+                    <!-- Expanded day content will be populated here -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Footer -->
     <div class="bg-gray-800 text-gray-300 py-2 px-4 text-xs text-center border-t border-gray-700">
-        <span>Clinica Provider Schedule - Static Viewer v1.0.8</span>
+        <span>Clinica Provider Schedule - Static Viewer v1.2.1</span>
         <span class="mx-2">•</span>
         <span id="connection-status">Connected to Supabase</span>
     </div>
@@ -333,13 +1121,52 @@
         async function init() {
             try {
                 await loadAllData();
+                
+                // Small delay to ensure DOM is ready
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
                 initializeFilters();
                 renderCalendar();
                 hideLoading();
+                
+                // Prevent touch navigation conflicts
+                preventTouchConflicts();
+                
                 console.log('✅ Static viewer loaded successfully with color mapping');
             } catch (error) {
                 console.error('❌ Error loading static viewer:', error);
                 showError(error.message);
+            }
+        }
+        
+        // Prevent touch navigation conflicts
+        function preventTouchConflicts() {
+            // Add event listeners to prevent accidental navigation
+            document.addEventListener('touchstart', function(e) {
+                // Don't interfere with our navigation buttons
+                if (e.target.closest('button') || e.target.closest('.mobile-view-option-btn')) {
+                    return;
+                }
+                
+                // Don't interfere with sidebar interactions
+                if (e.target.closest('#sidebar')) {
+                    return;
+                }
+                
+                e.stopPropagation();
+            }, { passive: true });
+            
+            // Ensure month name text doesn't trigger navigation
+            const monthElement = document.getElementById('current-month');
+            if (monthElement) {
+                monthElement.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                monthElement.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
             }
         }
 
@@ -377,41 +1204,84 @@
 
         // Initialize filter UI with proper color display
         function initializeFilters() {
-            // Setup vacation filter
-            document.getElementById('show-vacations').addEventListener('change', (e) => {
-                filters.showVacations = e.target.checked;
-                renderCalendar();
+            console.log('🔍 Initializing filters...', {
+                providers: allData.providers.length,
+                medicalAssistants: allData.medicalAssistants.length,
+                clinicTypes: allData.clinicTypes.length
             });
+
+            // Setup vacation filter
+            const vacationCheckbox = document.getElementById('show-vacations');
+            if (vacationCheckbox) {
+                // Remove existing listeners
+                vacationCheckbox.replaceWith(vacationCheckbox.cloneNode(true));
+                const newVacationCheckbox = document.getElementById('show-vacations');
+                newVacationCheckbox.addEventListener('change', (e) => {
+                    filters.showVacations = e.target.checked;
+                    if (window.innerWidth <= 768) {
+                        renderMobileView();
+                    } else {
+                        renderCalendar();
+                    }
+                });
+            }
 
             // Render provider filters with color dots
             const providersContainer = document.getElementById('providers-list');
-            providersContainer.innerHTML = allData.providers.map(provider => `
-                <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
-                    <input type="checkbox" checked onchange="toggleProvider('${provider.id}')" class="rounded text-blue-400">
-                    <div class="w-4 h-4 rounded-full provider-color-dot" style="background-color: ${getActualColor(provider.color)}"></div>
-                    <span class="text-sm text-gray-200 flex-1">${provider.name}</span>
-                </label>
-            `).join('');
+            if (providersContainer) {
+                if (allData.providers.length > 0) {
+                    providersContainer.innerHTML = allData.providers.map(provider => `
+                        <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
+                            <input type="checkbox" checked onchange="toggleProvider('${provider.id}')" class="rounded text-blue-400">
+                            <div class="w-4 h-4 rounded-full provider-color-dot" style="background-color: ${getActualColor(provider.color)}"></div>
+                            <span class="text-sm text-gray-200 flex-1">${provider.name}</span>
+                        </label>
+                    `).join('');
+                    console.log('✅ Providers populated:', allData.providers.length);
+                } else {
+                    providersContainer.innerHTML = '<div class="text-gray-400 text-sm italic p-2">Loading providers...</div>';
+                }
+            } else {
+                console.error('❌ Providers container not found');
+            }
 
             // Render medical assistant filters with color dots
             const masContainer = document.getElementById('medical-assistants-list');
-            masContainer.innerHTML = allData.medicalAssistants.map(ma => `
-                <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
-                    <input type="checkbox" checked onchange="toggleMA('${ma.id}')" class="rounded text-blue-400">
-                    <div class="w-4 h-4 rounded-full ma-color-dot" style="background-color: ${getActualColor(ma.color)}"></div>
-                    <span class="text-sm text-gray-200 flex-1">${ma.name}</span>
-                </label>
-            `).join('');
+            if (masContainer) {
+                if (allData.medicalAssistants.length > 0) {
+                    masContainer.innerHTML = allData.medicalAssistants.map(ma => `
+                        <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
+                            <input type="checkbox" checked onchange="toggleMA('${ma.id}')" class="rounded text-blue-400">
+                            <div class="w-4 h-4 rounded-full ma-color-dot" style="background-color: ${getActualColor(ma.color)}"></div>
+                            <span class="text-sm text-gray-200 flex-1">${ma.name}</span>
+                        </label>
+                    `).join('');
+                    console.log('✅ Medical Assistants populated:', allData.medicalAssistants.length);
+                } else {
+                    masContainer.innerHTML = '<div class="text-gray-400 text-sm italic p-2">Loading medical assistants...</div>';
+                }
+            } else {
+                console.error('❌ Medical Assistants container not found');
+            }
 
             // Render clinic type filters with color dots
             const clinicsContainer = document.getElementById('clinic-types-list');
-            clinicsContainer.innerHTML = allData.clinicTypes.map(clinic => `
-                <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
-                    <input type="checkbox" checked onchange="toggleClinic('${clinic.id}')" class="rounded text-blue-400">
-                    <div class="w-4 h-4 rounded-full clinic-color-dot" style="background-color: ${getActualColor(clinic.color)}"></div>
-                    <span class="text-sm text-gray-200 flex-1">${clinic.name}</span>
-                </label>
-            `).join('');
+            if (clinicsContainer) {
+                if (allData.clinicTypes.length > 0) {
+                    clinicsContainer.innerHTML = allData.clinicTypes.map(clinic => `
+                        <label class="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer filter-item transition-colors">
+                            <input type="checkbox" checked onchange="toggleClinic('${clinic.id}')" class="rounded text-blue-400">
+                            <div class="w-4 h-4 rounded-full clinic-color-dot" style="background-color: ${getActualColor(clinic.color)}"></div>
+                            <span class="text-sm text-gray-200 flex-1">${clinic.name}</span>
+                        </label>
+                    `).join('');
+                    console.log('✅ Clinic Types populated:', allData.clinicTypes.length);
+                } else {
+                    clinicsContainer.innerHTML = '<div class="text-gray-400 text-sm italic p-2">Loading clinic types...</div>';
+                }
+            } else {
+                console.error('❌ Clinic Types container not found');
+            }
         }
 
         // Filter functions
@@ -421,7 +1291,11 @@
             } else {
                 filters.providers.add(id);
             }
-            renderCalendar();
+            if (window.innerWidth <= 768) {
+                renderMobileView();
+            } else {
+                renderCalendar();
+            }
         }
 
         function toggleMA(id) {
@@ -430,7 +1304,11 @@
             } else {
                 filters.medicalAssistants.add(id);
             }
-            renderCalendar();
+            if (window.innerWidth <= 768) {
+                renderMobileView();
+            } else {
+                renderCalendar();
+            }
         }
 
         function toggleClinic(id) {
@@ -439,7 +1317,11 @@
             } else {
                 filters.clinicTypes.add(id);
             }
-            renderCalendar();
+            if (window.innerWidth <= 768) {
+                renderMobileView();
+            } else {
+                renderCalendar();
+            }
         }
 
         function toggleAllProviders() {
@@ -532,15 +1414,13 @@
                 const dayShifts = getShiftsForDate(currentDay);
                 
                 daysHTML += `
-                    <div class="relative flex flex-col p-2 min-h-[120px] ${
+                    <div class="day-cell ${
                         isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
                     } ${isToday ? 'bg-blue-50 border-2 border-blue-200' : ''}">
                         <div class="text-sm font-medium ${isToday ? 'text-blue-600' : ''} mb-2">
                             ${currentDay.getDate()}
                         </div>
-                        <div class="flex-1 space-y-1">
-                            ${renderDayShifts(dayShifts, currentDay)}
-                        </div>
+                        ${renderDayShifts(dayShifts, currentDay)}
                     </div>
                 `;
                 
@@ -548,6 +1428,21 @@
             }
             
             return daysHTML;
+        }
+
+        // Get text contrast class based on background color
+        function getTextContrastClass(backgroundColor) {
+            // Convert hex color to RGB to determine brightness
+            const hex = backgroundColor.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            
+            // Calculate luminance
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            
+            // Return light text for dark backgrounds, dark text for light backgrounds
+            return luminance > 0.5 ? 'text-contrast-dark' : 'text-contrast-light';
         }
 
         // Render shifts for a specific day
@@ -570,10 +1465,10 @@
             const nonVacationShifts = filteredShifts.filter(s => !s.is_vacation);
             const vacationShifts = filteredShifts.filter(s => s.is_vacation);
             
-            let html = '';
+            let html = '<div class="day-shifts-container">';
             
-            // Show up to 4 non-vacation shifts
-            const shiftsToShow = nonVacationShifts.slice(0, 4);
+            // Show up to 6 non-vacation shifts (2 rows of 3)
+            const shiftsToShow = nonVacationShifts.slice(0, 6);
             shiftsToShow.forEach(shift => {
                 const provider = allData.providers.find(p => p.id === shift.provider_id);
                 const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
@@ -583,24 +1478,34 @@
                 
                 const tooltipText = `<strong>${provider?.name || 'Unknown Provider'}</strong>${clinic ? `\n📍 ${clinic.name}` : ''}${shift.start_time ? `\n⏰ ${shift.start_time} - ${shift.end_time}` : ''}${mas.length > 0 ? `\n👥 MA: ${mas.map(ma => ma.name).join(', ')}` : ''}${shift.notes ? `\n📝 ${shift.notes}` : ''}`;
                 
+                const bgColor = getActualColor(provider?.color || 'bg-gray-500');
+                const textClass = getTextContrastClass(bgColor);
+                
+                // Generate MA badges
+                const maBadges = mas.length > 0 ? 
+                    `<div class="ma-badge">${mas.map(ma => getInitials(ma.name)).join('')}</div>` : '';
+                
                 html += `
-                    <div class="shift-badge text-white" 
-                         style="background-color: ${getActualColor(provider?.color || 'bg-gray-500')}"
+                    <div class="shift-badge ${textClass}" 
+                         style="background-color: ${bgColor}"
                          onmouseenter="showTooltip(event, '${tooltipText.replace(/'/g, '&apos;')}')"
                          onmouseleave="hideTooltip()">
-                        ${getInitials(provider?.name || '??')}${mas.length > 0 ? mas.map(ma => `<span class="ma-badge">${getInitials(ma.name)}</span>`).join('') : ''}
+                        <div class="provider-initials">${getInitials(provider?.name || '??')}</div>
+                        ${maBadges}
                     </div>
                 `;
             });
             
             // Show "more" indicator if there are additional shifts
-            if (nonVacationShifts.length > 4) {
+            if (nonVacationShifts.length > 6) {
                 html += `
-                    <div class="text-xs text-blue-600 text-center font-medium">
-                        +${nonVacationShifts.length - 4} more
+                    <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; border-radius: 6px; font-size: 9px; font-weight: 600; color: #6b7280;">
+                        +${nonVacationShifts.length - 6}
                     </div>
                 `;
             }
+            
+            html += '</div>';
             
             // Show vacation bar at bottom if there are vacations
             if (vacationShifts.length > 0) {
@@ -610,7 +1515,7 @@
                 });
                 
                 html += `
-                    <div class="vacation-bar text-xs text-center"
+                    <div class="vacation-bar"
                          title="Vacation/Time-off: ${vacationShifts.map(s => allData.providers.find(p => p.id === s.provider_id)?.name || 'Unknown').join(', ')}">
                         ${vacationInitials.join(' ')}
                     </div>
@@ -724,86 +1629,70 @@
                 currentView === 'day' ? 'px-3 py-1 text-sm font-medium view-btn-active rounded transition-colors' : 'px-3 py-1 text-sm font-medium view-btn-inactive rounded transition-colors';
         }
 
-        // Week view rendering
+        // Week view rendering (redesigned)
         function renderWeekView() {
             const weekStart = getWeekStart(currentDate);
             currentWeekStart = new Date(weekStart);
-            
-            document.getElementById('current-month').textContent = 
-                `${currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-            const calendarHTML = `
-                <div class="grid grid-cols-8 gap-px bg-gray-200">
-                    <div class="bg-gray-50 p-2"></div>
-                    ${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
-                        const date = new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000);
-                        return `<div class="bg-gray-50 p-2 text-center font-semibold text-sm">
-                            <div>${day}</div>
-                            <div class="text-lg ${isToday_check(date) ? 'text-blue-600 font-bold' : ''}">${date.getDate()}</div>
-                        </div>`;
-                    }).join('')}
-                    ${generateWeekRows()}
-                </div>
-            `;
-            
-            document.getElementById('calendar').innerHTML = calendarHTML;
-        }
-
-        function generateWeekRows() {
-            let html = '';
-            for (let hour = 6; hour <= 22; hour++) {
-                const timeStr = hour <= 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`;
-                if (hour === 12) timeStr = '12:00 PM';
-                
-                html += `
-                    <div class="bg-white p-2 text-xs text-gray-500 font-medium border-r">${timeStr}</div>
-                `;
-                
-                for (let day = 0; day < 7; day++) {
-                    const date = new Date(currentWeekStart.getTime() + day * 24 * 60 * 60 * 1000);
-                    const dayShifts = getShiftsForDate(date).filter(shift => {
-                        if (shift.start_time && shift.end_time) {
-                            const startHour = parseInt(shift.start_time.split(':')[0]);
-                            const endHour = parseInt(shift.end_time.split(':')[0]);
-                            return startHour <= hour && endHour > hour;
-                        }
-                        return false;
-                    });
-                    
-                    html += `<div class="bg-white p-1 min-h-[30px] border-r">
-                        ${renderWeekShifts(dayShifts)}
-                    </div>`;
-                }
+            const weekDays = [];
+            for (let i = 0; i < 7; i++) {
+                weekDays.push(new Date(weekStart.getTime() + i * 24 * 60 * 60 * 1000));
             }
-            return html;
-        }
+            document.getElementById('current-month').textContent =
+                `${weekDays[0].toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${weekDays[6].toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
 
-        function renderWeekShifts(shifts) {
-            const filteredShifts = shifts.filter(shift => {
-                if (!filters.showVacations && shift.is_vacation) return false;
-                if (!filters.providers.has(shift.provider_id)) return false;
-                if (shift.clinic_type_id && !filters.clinicTypes.has(shift.clinic_type_id)) return false;
-                return true;
+            let calendarHTML = `<div class="week-container"><div class="week-grid grid grid-cols-7 gap-px bg-gray-200" style="min-height: 70vh;">`;
+            // Day headers
+            calendarHTML += weekDays.map((day, idx) =>
+                `<div class="week-view-header-cell">
+                    <div>${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day.getDay()]}</div>
+                    <div class="week-view-header-date">${day.getDate()}</div>
+                </div>`
+            ).join('');
+            // Day columns
+            weekDays.forEach(day => {
+                const dayShifts = getShiftsForDate(day).filter(shift => {
+                    if (!filters.showVacations && shift.is_vacation) return false;
+                    if (!filters.providers.has(shift.provider_id)) return false;
+                    if (shift.clinic_type_id && !filters.clinicTypes.has(shift.clinic_type_id)) return false;
+                    // MA filter for non-vacation
+                    if (!shift.is_vacation && shift.medical_assistant_ids && shift.medical_assistant_ids.length > 0) {
+                        const hasVisibleMA = shift.medical_assistant_ids.some(maId => filters.medicalAssistants.has(maId));
+                        if (!hasVisibleMA) return false;
+                    }
+                    return true;
+                });
+                const nonVacationShifts = dayShifts.filter(s => !s.is_vacation);
+                const vacationShifts = dayShifts.filter(s => s.is_vacation);
+                calendarHTML += `<div class="week-day-col">`;
+                if (nonVacationShifts.length === 0 && vacationShifts.length === 0) {
+                    calendarHTML += `<div class="text-xs text-gray-400 italic mt-2">No shifts</div>`;
+                } else {
+                    nonVacationShifts.forEach(shift => {
+                        const provider = allData.providers.find(p => p.id === shift.provider_id);
+                        const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
+                        const mas = (shift.medical_assistant_ids || []).map(maId => allData.medicalAssistants.find(ma => ma.id === maId)).filter(ma => ma);
+                        const bgColor = getActualColor(provider?.color || 'bg-gray-500');
+                        const textClass = getTextContrastClass(bgColor);
+                        calendarHTML += `<div class="week-shift-card ${textClass}" style="background:${bgColor}" title="${provider?.name || ''}${clinic ? '\n@ ' + clinic.name : ''}${shift.start_time && shift.end_time ? '\n' + shift.start_time + ' - ' + shift.end_time : ''}${mas.length > 0 ? '\nMAs: ' + mas.map(ma => ma.name).join(', ') : ''}${shift.notes ? '\n' + shift.notes : ''}">
+                            <span class="shift-provider">${provider ? provider.name : '??'}</span>
+                            ${clinic ? `<span class="shift-clinic">@ ${clinic.name}</span>` : ''}
+                            ${shift.start_time && shift.end_time ? `<span class="shift-time">${shift.start_time} - ${shift.end_time}</span>` : ''}
+                            ${mas.length > 0 ? `<span class="shift-mas">${mas.map(ma => ma.name).join(', ')}</span>` : ''}
+                        </div>`;
+                    });
+                }
+                // Vacation bar at bottom
+                if (vacationShifts.length > 0) {
+                    const vacationInitials = vacationShifts.map(shift => {
+                        const provider = allData.providers.find(p => p.id === shift.provider_id);
+                        return getInitials(provider?.name || '??');
+                    });
+                    calendarHTML += `<div class="week-vacation-bar" title="Vacation/Time-off: ${vacationShifts.map(s => allData.providers.find(p => p.id === s.provider_id)?.name || 'Unknown').join(', ')}">${vacationInitials.join(' ')}</div>`;
+                }
+                calendarHTML += `</div>`;
             });
-
-            return filteredShifts.map(shift => {
-                const provider = allData.providers.find(p => p.id === shift.provider_id);
-                const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
-                const mas = (shift.medical_assistant_ids || []).map(maId => 
-                    allData.medicalAssistants.find(ma => ma.id === maId)
-                ).filter(ma => ma);
-                
-                const tooltipText = `<strong>${provider?.name || 'Unknown Provider'}</strong>${clinic ? `\n📍 ${clinic.name}` : ''}${shift.start_time ? `\n⏰ ${shift.start_time} - ${shift.end_time}` : ''}${mas.length > 0 ? `\n👥 MA: ${mas.map(ma => ma.name).join(', ')}` : ''}${shift.notes ? `\n📝 ${shift.notes}` : ''}`;
-                
-                return `
-                    <div class="shift-badge text-white text-xs mb-1" 
-                         style="background-color: ${getActualColor(provider?.color || 'bg-gray-500')}"
-                         onmouseenter="showTooltip(event, '${tooltipText.replace(/'/g, '&apos;')}')"
-                         onmouseleave="hideTooltip()">
-                        ${getInitials(provider?.name || '??')} ${mas.map(ma => ma.name).join(', ')}
-                    </div>
-                `;
-            }).join('');
+            calendarHTML += `</div></div>`;
+            document.getElementById('calendar').innerHTML = calendarHTML;
         }
 
         // Day view rendering
@@ -858,31 +1747,365 @@
 
         // Navigation functions updated for different views
         function navigateMonth(direction) {
-            if (currentView === 'month') {
+            // Check if we're on mobile first
+            if (window.innerWidth <= 768) {
+                // Mobile navigation - always navigate by month
                 currentDate.setMonth(currentDate.getMonth() + direction);
-                renderCalendar();
-            } else if (currentView === 'week') {
-                currentDate.setDate(currentDate.getDate() + (direction * 7));
-                renderWeekView();
-            } else if (currentView === 'day') {
-                currentDate.setDate(currentDate.getDate() + direction);
-                renderDayView();
+                renderMobileView(); // This will render either calendar or list view
+            } else {
+                // Desktop navigation
+                if (currentView === 'month') {
+                    currentDate.setMonth(currentDate.getMonth() + direction);
+                    renderCalendar();
+                } else if (currentView === 'week') {
+                    currentDate.setDate(currentDate.getDate() + (direction * 7));
+                    renderWeekView();
+                } else if (currentView === 'day') {
+                    currentDate.setDate(currentDate.getDate() + direction);
+                    renderDayView();
+                }
             }
         }
 
         function goToToday() {
             currentDate = new Date();
-            if (currentView === 'month') {
-                renderCalendar();
-            } else if (currentView === 'week') {
-                renderWeekView();
-            } else if (currentView === 'day') {
-                renderDayView();
+            
+            // Check if we're on mobile first
+            if (window.innerWidth <= 768) {
+                // Mobile today navigation
+                renderMobileView(); // This will call the appropriate render function
+            } else {
+                // Desktop today navigation
+                if (currentView === 'month') {
+                    renderCalendar();
+                } else if (currentView === 'week') {
+                    renderWeekView();
+                } else if (currentView === 'day') {
+                    renderDayView();
+                }
+            }
+        }
+        
+        // Removed updateHeaderText - header text is handled by standard calendar functions
+
+        // Section toggle functionality
+        function toggleSection(sectionName) {
+            const contentElement = document.getElementById(`${sectionName}-list`);
+            const arrowElement = document.getElementById(`${sectionName}-arrow`);
+            
+            if (contentElement.classList.contains('collapsed')) {
+                // Expand
+                contentElement.classList.remove('collapsed');
+                contentElement.classList.add('expanded');
+                arrowElement.classList.remove('collapsed');
+            } else {
+                // Collapse
+                contentElement.classList.remove('expanded');
+                contentElement.classList.add('collapsed');
+                arrowElement.classList.add('collapsed');
             }
         }
 
+        // Mobile sidebar toggle functionality
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('open');
+            }
+        }
+
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburger');
+            
+            if (window.innerWidth < 1024 && 
+                sidebar.classList.contains('open') && 
+                !sidebar.contains(event.target) && 
+                !hamburger.contains(event.target)) {
+                toggleMobileSidebar();
+            }
+        });
+
+        // ===== MOBILE FUNCTIONALITY =====
+        
+        let currentMobileView = 'calendar'; // 'list', 'calendar' (removed 'quick')
+        
+        // Mobile view switching with error handling
+        function setMobileView(view) {
+            console.log('Setting mobile view to:', view);
+            try {
+                currentMobileView = view;
+                updateMobileViewButtons();
+                renderMobileView();
+                console.log('Mobile view set successfully to:', view);
+            } catch (error) {
+                console.error('Error setting mobile view:', error);
+            }
+        }
+        
+        function updateMobileViewButtons() {
+            // Update sidebar button states
+            const calBtn = document.getElementById('mobile-calendar-sidebar-btn');
+            const listBtn = document.getElementById('mobile-list-sidebar-btn');
+            
+            if (calBtn) {
+                if (currentMobileView === 'calendar') {
+                    calBtn.classList.add('active');
+                } else {
+                    calBtn.classList.remove('active');
+                }
+            }
+            
+            if (listBtn) {
+                if (currentMobileView === 'list') {
+                    listBtn.classList.add('active');
+                } else {
+                    listBtn.classList.remove('active');
+                }
+            }
+        }
+        
+        function renderMobileView() {
+            // Hide all mobile views first
+            document.getElementById('mobile-list-view').classList.remove('active');
+            document.getElementById('calendar').classList.remove('mobile-calendar-active');
+            
+            if (currentMobileView === 'list') {
+                // Show list view
+                document.getElementById('mobile-list-view').classList.add('active');
+                document.getElementById('calendar').style.display = 'none';
+                renderMobileListView();
+            } else {
+                // Show calendar view (default)
+                document.getElementById('mobile-list-view').classList.remove('active');
+                document.getElementById('calendar').style.display = 'block';
+                document.getElementById('calendar').classList.add('mobile-calendar-active');
+                renderCalendar(); // Use existing calendar render
+            }
+        }
+        
+        // Removed renderMobileQuickView - simplified mobile experience
+        
+        function renderMobileShiftsList(containerId, shifts, includeDate = false) {
+            const container = document.getElementById(containerId);
+            
+            // Filter shifts
+            const filteredShifts = shifts.filter(shift => {
+                if (!filters.showVacations && shift.is_vacation) return false;
+                if (!filters.providers.has(shift.provider_id)) return false;
+                if (shift.clinic_type_id && !filters.clinicTypes.has(shift.clinic_type_id)) return false;
+                if (!shift.is_vacation && shift.medical_assistant_ids && shift.medical_assistant_ids.length > 0) {
+                    const hasVisibleMA = shift.medical_assistant_ids.some(maId => filters.medicalAssistants.has(maId));
+                    if (!hasVisibleMA) return false;
+                }
+                return true;
+            });
+            
+            if (filteredShifts.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-sm italic">No shifts scheduled</div>';
+                return;
+            }
+            
+            container.innerHTML = filteredShifts.map(shift => {
+                const provider = allData.providers.find(p => p.id === shift.provider_id);
+                const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
+                const mas = (shift.medical_assistant_ids || []).map(maId => allData.medicalAssistants.find(ma => ma.id === maId)).filter(ma => ma);
+                const bgColor = getActualColor(provider?.color || 'bg-gray-500');
+                
+                return `
+                    <div class="mobile-shift-item" style="border-left-color: ${bgColor}">
+                        ${includeDate ? `<div class="mobile-shift-time">${shift.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>` : ''}
+                        <div class="mobile-shift-time">${shift.start_time && shift.end_time ? `${shift.start_time}-${shift.end_time}` : 'All day'}</div>
+                        <div class="mobile-shift-provider">${provider?.name || 'Unknown'}</div>
+                        <div class="mobile-shift-details">
+                            ${shift.is_vacation ? '🏖️ Vacation' : ''}
+                            ${clinic ? `@ ${clinic.name}` : ''}
+                            ${mas.length > 0 ? ` • MAs: ${mas.map(ma => ma.name).join(', ')}` : ''}
+                            ${shift.notes ? ` • ${shift.notes}` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderMobileListView() {
+            const container = document.getElementById('mobile-list-view');
+            const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            
+            let html = '';
+            
+            for (let d = new Date(monthStart); d <= monthEnd; d.setDate(d.getDate() + 1)) {
+                const dayShifts = getShiftsForDate(new Date(d));
+                const filteredShifts = dayShifts.filter(shift => {
+                    if (!filters.showVacations && shift.is_vacation) return false;
+                    if (!filters.providers.has(shift.provider_id)) return false;
+                    if (shift.clinic_type_id && !filters.clinicTypes.has(shift.clinic_type_id)) return false;
+                    if (!shift.is_vacation && shift.medical_assistant_ids && shift.medical_assistant_ids.length > 0) {
+                        const hasVisibleMA = shift.medical_assistant_ids.some(maId => filters.medicalAssistants.has(maId));
+                        if (!hasVisibleMA) return false;
+                    }
+                    return true;
+                });
+                
+                if (filteredShifts.length > 0) {
+                    const isToday = isToday_check(new Date(d));
+                    html += `
+                        <div class="mobile-day-card ${isToday ? 'ring-2 ring-blue-500' : ''}">
+                            <div class="mobile-day-header">
+                                <div>
+                                    <div class="font-semibold">${d.toLocaleDateString('en-US', { weekday: 'long' })}</div>
+                                    <div class="text-sm text-gray-600">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                </div>
+                                <div class="text-sm text-gray-500">${filteredShifts.length} shift${filteredShifts.length > 1 ? 's' : ''}</div>
+                            </div>
+                            <div class="mobile-shifts-list">
+                                ${filteredShifts.map(shift => {
+                                    const provider = allData.providers.find(p => p.id === shift.provider_id);
+                                    const clinic = allData.clinicTypes.find(c => c.id === shift.clinic_type_id);
+                                    const mas = (shift.medical_assistant_ids || []).map(maId => allData.medicalAssistants.find(ma => ma.id === maId)).filter(ma => ma);
+                                    const bgColor = getActualColor(provider?.color || 'bg-gray-500');
+                                    
+                                    return `
+                                        <div class="mobile-shift-item" style="border-left-color: ${bgColor}">
+                                            <div class="mobile-shift-time">${shift.start_time && shift.end_time ? `${shift.start_time}-${shift.end_time}` : 'All day'}</div>
+                                            <div class="mobile-shift-provider">${provider?.name || 'Unknown'}</div>
+                                            <div class="mobile-shift-details">
+                                                ${shift.is_vacation ? '🏖️ Vacation' : ''}
+                                                ${clinic ? `@ ${clinic.name}` : ''}
+                                                ${mas.length > 0 ? ` • MAs: ${mas.map(ma => ma.name).join(', ')}` : ''}
+                                                ${shift.notes ? ` • ${shift.notes}` : ''}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            if (html === '') {
+                html = '<div class="text-center text-gray-500 italic mt-8">No shifts found for this month</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function closeMobileDayExpanded() {
+            document.getElementById('mobile-day-expanded').classList.remove('active');
+        }
+        
+        // Initialize mobile on page load
+        function initializeMobile() {
+            if (window.innerWidth <= 768) {
+                // Mobile initialization
+                updateMobileViewButtons();
+                renderMobileView();
+                
+                // Force re-initialization of filters for mobile (multiple attempts)
+                setTimeout(() => {
+                    console.log('🔄 First attempt: Re-initializing filters for mobile...');
+                    initializeFilters();
+                }, 500);
+                
+                setTimeout(() => {
+                    const providersContainer = document.getElementById('providers-list');
+                    if (providersContainer && providersContainer.innerHTML.trim() === '') {
+                        console.log('🔄 Second attempt: Re-initializing filters for mobile...');
+                        initializeFilters();
+                    }
+                }, 1500);
+                
+                setTimeout(() => {
+                    const providersContainer = document.getElementById('providers-list');
+                    if (providersContainer && providersContainer.innerHTML.trim() === '') {
+                        console.log('🔄 Third attempt: Re-initializing filters for mobile...');
+                        initializeFilters();
+                    }
+                }, 3000);
+            }
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            initializeMobile(); // Always call to handle both mobile and desktop
+        });
+        
+        // Force mobile styles programmatically if media queries fail
+        function forceMobileStyles() {
+            if (window.innerWidth <= 768) {
+                // Force hide desktop elements
+                const desktopSwitcher = document.querySelector('.desktop-view-switcher');
+                if (desktopSwitcher) {
+                    desktopSwitcher.style.display = 'none';
+                }
+                
+                // Force show mobile elements
+                const mobileSwitcher = document.getElementById('mobile-view-switcher');
+                if (mobileSwitcher) {
+                    mobileSwitcher.style.display = 'flex';
+                }
+                
+                // Force compact styles
+                document.body.classList.add('mobile-force');
+            } else {
+                // Force show desktop elements
+                const desktopSwitcher = document.querySelector('.desktop-view-switcher');
+                if (desktopSwitcher) {
+                    desktopSwitcher.style.display = 'flex';
+                }
+                
+                // Force hide mobile elements
+                const mobileSwitcher = document.getElementById('mobile-view-switcher');
+                if (mobileSwitcher) {
+                    mobileSwitcher.style.display = 'none';
+                }
+                
+                document.body.classList.remove('mobile-force');
+            }
+        }
+        
+        // Add better touch handling for navigation buttons
+        function setupNavigationButtons() {
+            const prevBtn = document.querySelector('button[onclick="navigateMonth(-1)"]');
+            const nextBtn = document.querySelector('button[onclick="navigateMonth(1)"]');
+            const todayBtn = document.querySelector('button[onclick="goToToday()"]');
+            
+            [prevBtn, nextBtn, todayBtn].forEach(btn => {
+                if (btn) {
+                    btn.addEventListener('touchstart', function(e) {
+                        e.stopPropagation();
+                    }, { passive: true });
+                    
+                    btn.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Trigger the click after a small delay
+                        setTimeout(() => {
+                            btn.click();
+                        }, 50);
+                    });
+                }
+            });
+        }
+
         // Initialize when page loads
-        window.addEventListener('load', init);
+        window.addEventListener('load', () => {
+            init();
+            initializeMobile();
+            forceMobileStyles(); // Force styles if media queries don't work
+            setupNavigationButtons(); // Setup better touch handling
+            
+            // Mobile buttons are now in sidebar - no additional initialization needed
+        });
     </script>
 </body>
 </html> 

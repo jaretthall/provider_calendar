@@ -109,8 +109,14 @@ All users must sign in to access any application functionality. Every authentica
 - Delete a single occurrence or the entire series (including all exceptions)
 
 #### Shift Duplication (Authentication Required)
-- Duplicate an existing single shift instance as a new, non-recurring shift
-- Duplicate an entire recurring series as a new, independent series
+- **Drag-to-Duplicate:**
+  - When a user drags a shift to a new date, the default action is to duplicate the shift (not move)
+  - The original shift remains; a new shift is created at the drop location
+- **Dialog-Based Duplication:**
+  - In the Edit Shift dialog, provide a "Duplicate Shift" button
+  - Duplicated shift opens as a new, editable instance
+- **(Optional) Move Mode:**
+  - Option to move (not duplicate) a shift if desired (toggle or modifier key)
 
 #### Shift Deletion (Authentication Required)
 - Delete individual shifts, specific occurrences of recurring shifts, or entire recurring series
@@ -137,6 +143,22 @@ All users must sign in to access any application functionality. Every authentica
 
 #### Conflict Highlighting
 - Visual indicators (e.g., warning icon) on shifts that overlap with other shifts for the same provider
+
+#### PDF Export (Available to All Authenticated Users)
+**Fully Implemented with Comprehensive Options:**
+- Flexible date range selection
+- Multiple view types (List format and Calendar capture)
+- Calendar view options (Month, Week, Day)
+- Personnel filtering (Providers, Clinic Types, Medical Assistants)
+- Include/exclude vacation and time-off
+- Paper size options (A4, Letter, Legal)
+- Orientation options (Portrait, Landscape)
+- Custom report titles
+- Summary statistics and metadata
+- **(Planned) Export Controls:**
+  - Fine-grained controls for which data to include/exclude
+  - Option to export only selected shifts, departments, or filtered views
+  - Improved UI for PDF export setup
 
 ### 4.5. User Interaction & Experience
 
@@ -192,23 +214,25 @@ The application uses Supabase for primary data storage:
 #### JSON Data Export (Available to All Authenticated Users)
 - Export all application data (Providers, Clinics, MAs, Shifts, User Settings) into a single JSON file for backup or transfer
 
-#### PDF Export (Available to All Authenticated Users)
-**Fully Implemented with Comprehensive Options:**
-- Flexible date range selection
-- Multiple view types (List format and Calendar capture)
-- Calendar view options (Month, Week, Day)
-- Personnel filtering (Providers, Clinic Types, Medical Assistants)
-- Include/exclude vacation and time-off
-- Paper size options (A4, Letter, Legal)
-- Orientation options (Portrait, Landscape)
-- Custom report titles
-- Summary statistics and metadata
-
 ### 4.7. Application Settings (Authentication Required)
 
 - **Default Calendar View:** Set whether the calendar initially loads in 'Month', 'Week', or 'Day' view
 - **Week Starts On:** Configure the calendar week to start on 'Sunday' or 'Monday'
 - **Connection Status:** Display current data storage mode (Cloud/Local)
+
+### 4.8. Multi-Department Scheduling (Planned v2+)
+- **Department Model:**
+  - Expand the database to include departments (e.g., Providers, Medical Assistants, Front Staff, Behavioral Health, Billing, etc.)
+  - Each staff member is assigned to a department
+- **Department Filtering:**
+  - Add a department filter (e.g., dropdown or segmented control in the header)
+  - Users can select which department to view/schedule
+- **Role-Based Scheduling:**
+  - Different managers can be responsible for scheduling their own department
+  - Permissions and UI may adapt based on department selection (future enhancement)
+- **Unified Application:**
+  - All departments and schedules are managed in a single application and database
+  - Filtering and UI context switch between departments
 
 ---
 
@@ -374,3 +398,4 @@ The application is **production-ready** with:
 - **External Calendar Integration:** Allow synchronization with external calendar platforms (e.g., Google Calendar, Outlook Calendar)
 - **Real-time Notifications:** Push notifications for schedule changes and conflicts
 - **Advanced Analytics:** Provider utilization metrics, scheduling pattern analysis, and optimization suggestions
+- **Departmental Scheduling:** Full support for multi-department scheduling, department-based permissions, and cross-department reporting
