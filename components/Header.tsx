@@ -104,7 +104,10 @@ const Header: React.FC<HeaderProps> = ({
           <button
             onClick={() => openModal('EXPORT_OPTIONS_MODAL' as ModalType, { 
               onExportJson: onExportData,
-              openPdfSetupModal: () => openModal('PDF_EXPORT_SETUP_MODAL' as ModalType)
+              openPdfSetupModal: () => openModal('PDF_EXPORT_SETUP_MODAL' as ModalType, {
+                currentCalendarViewMode: calendarViewMode,
+                onSetCalendarViewMode: onSetCalendarViewMode
+              })
             })}
             className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
             title="Export schedules to JSON or PDF"

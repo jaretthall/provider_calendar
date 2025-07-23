@@ -97,7 +97,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
   const title = options.title || `Schedule Report - ${options.startDate} to ${options.endDate}`;
   
   let html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; font-size: 12px; line-height: 1.4;">
+    <div style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4;">
       <h1 style="text-align: center; margin-bottom: 30px; font-size: 18px; color: #333;">${title}</h1>
       <div style="margin-bottom: 20px; text-align: center; font-size: 10px; color: #666;">
         Generated on ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })} at ${new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' })}
@@ -122,29 +122,30 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
       <tbody>
     `;
 
+    // Add rows with page-break-inside: avoid for better printing
     sortedShifts.forEach((shift, index) => {
       const isVacation = shift.isVacation;
       const backgroundColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
       const vacationStyle = isVacation ? 'background-color: #fef2f2; color: #dc2626;' : '';
       
       html += `
-        <tr style="border-bottom: 1px solid #dee2e6; ${vacationStyle}">
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+        <tr style="border-bottom: 1px solid #dee2e6; page-break-inside: avoid; ${vacationStyle}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${new Date(shift.startDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}${shift.startDate !== shift.endDate ? ` - ${new Date(shift.endDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` : ''}
           </td>
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${getProviderName(shift.providerId)}
           </td>
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? 'All Day' : `${shift.startTime || ''} - ${shift.endTime || ''}`}
           </td>
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? 'Vacation' : getClinicName(shift.clinicTypeId || '')}
           </td>
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? '-' : getMaNames(shift.medicalAssistantIds)}
           </td>
-          <td style="padding: 6px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${shift.notes || '-'}
           </td>
         </tr>
@@ -155,7 +156,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
   }
 
   html += `
-      <div style="margin-top: 30px; font-size: 10px; color: #666; border-top: 1px solid #dee2e6; padding-top: 10px;">
+      <div style="margin-top: 30px; font-size: 10px; color: #666; border-top: 1px solid #dee2e6; padding-top: 10px; page-break-inside: avoid;">
         <p><strong>Summary:</strong></p>
         <ul style="margin: 5px 0; padding-left: 20px;">
           <li>Total shifts: ${sortedShifts.length}</li>
@@ -170,20 +171,45 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
   return html;
 };
 
-// Convert HTML to PDF using html2canvas and jsPDF
+// Convert HTML to PDF using html2canvas and jsPDF with better page handling
 export const generatePdfFromHtml = async (
   htmlContent: string, 
   options: PdfExportOptions,
   filename?: string
 ): Promise<void> => {
   try {
-    // Create a temporary container for the HTML content
+    // Get paper dimensions
+    const paperConfig = PAPER_SIZES[options.paperSize];
+    const isLandscape = options.orientation === 'landscape';
+    const pageWidth = isLandscape ? paperConfig.height : paperConfig.width;
+    const pageHeight = isLandscape ? paperConfig.width : paperConfig.height;
+
+    // Create PDF first
+    const pdf = new jsPDF({
+      orientation: options.orientation,
+      unit: 'mm',
+      format: options.paperSize
+    });
+
+    // Create a temporary container with print styles
     const container = document.createElement('div');
-    container.innerHTML = htmlContent;
+    container.innerHTML = `
+      <style>
+        @media print {
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+        }
+      </style>
+      ${htmlContent}
+    `;
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '-9999px';
-    container.style.width = '800px'; // Fixed width for consistent rendering
+    container.style.width = `${(pageWidth - 20) * 3.7795}px`; // Convert mm to px (assuming 96 DPI)
+    container.style.padding = '20px';
+    container.style.backgroundColor = '#ffffff';
     document.body.appendChild(container);
 
     // Generate canvas from HTML
@@ -210,24 +236,33 @@ export const generatePdfFromHtml = async (
       format: options.paperSize
     });
 
-    // Calculate image dimensions to fit page
-    const imgWidth = pageWidth - 20; // 10mm margin on each side
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    // Calculate dimensions with margins
+    const margin = 15; // 15mm margins
+    const contentWidth = pageWidth - (2 * margin);
+    const contentHeight = pageHeight - (2 * margin);
     
-    // Add image to PDF
+    // Calculate scale to fit width
+    const scale = contentWidth / (canvas.width / 3.7795); // Convert px to mm
+    const scaledHeight = (canvas.height / 3.7795) * scale;
+    
+    // Add image to PDF with proper page breaks
     const imgData = canvas.toDataURL('image/png');
-    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-
-    // If content is taller than page, add additional pages
-    let remainingHeight = imgHeight - (pageHeight - 20);
-    let currentY = -(pageHeight - 20);
-
-    while (remainingHeight > 0) {
-      pdf.addPage();
-      const nextPageHeight = Math.min(remainingHeight, pageHeight - 20);
-      pdf.addImage(imgData, 'PNG', 10, currentY, imgWidth, imgHeight);
-      remainingHeight -= (pageHeight - 20);
-      currentY -= (pageHeight - 20);
+    const totalPages = Math.ceil(scaledHeight / contentHeight);
+    
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) {
+        pdf.addPage();
+      }
+      
+      const yOffset = -page * contentHeight;
+      pdf.addImage(
+        imgData, 
+        'PNG', 
+        margin, 
+        margin + yOffset, 
+        contentWidth, 
+        scaledHeight
+      );
     }
 
     // Generate filename
@@ -242,61 +277,103 @@ export const generatePdfFromHtml = async (
   }
 };
 
-// Generate calendar-style PDF (simplified version - captures current calendar view)
+// Generate calendar-style PDF (captures specified calendar view)
 export const generateCalendarPdf = async (
   calendarElementId: string,
   options: PdfExportOptions,
+  data: PdfGenerationData,
   filename?: string
 ): Promise<void> => {
   try {
+    // First, we need to ensure the calendar is showing the right view
+    // The calendar should already be in the correct view based on user selection
     const calendarElement = document.getElementById(calendarElementId);
     if (!calendarElement) {
       throw new Error('Calendar element not found');
     }
 
-    // Generate canvas from calendar element
+    // For week/day views, we might want landscape by default
+    const recommendedOrientation = options.calendarView === 'month' ? 'portrait' : 'landscape';
+    const actualOrientation = options.orientation || recommendedOrientation;
+
+    // Generate canvas from calendar element with better quality
     const canvas = await html2canvas(calendarElement, {
-      scale: 2,
+      scale: 3, // Higher quality for better text rendering
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      logging: false
     });
 
     // Get paper dimensions
     const paperConfig = PAPER_SIZES[options.paperSize];
-    const isLandscape = options.orientation === 'landscape';
+    const isLandscape = actualOrientation === 'landscape';
     const pageWidth = isLandscape ? paperConfig.height : paperConfig.width;
     const pageHeight = isLandscape ? paperConfig.width : paperConfig.height;
 
     // Create PDF
     const pdf = new jsPDF({
-      orientation: options.orientation,
+      orientation: actualOrientation,
       unit: 'mm',
       format: options.paperSize
     });
 
-    // Add title
-    const title = options.title || `Calendar View - ${new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })}`;
-    pdf.setFontSize(16);
-    pdf.text(title, pageWidth / 2, 15, { align: 'center' });
+    // Add title with view type
+    const viewLabel = options.calendarView.charAt(0).toUpperCase() + options.calendarView.slice(1);
+    const dateRange = options.calendarView === 'month' 
+      ? new Date(options.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      : `${options.startDate} to ${options.endDate}`;
+    const title = options.title || `${viewLabel} View - ${dateRange}`;
+    
+    pdf.setFontSize(14);
+    pdf.text(title, pageWidth / 2, 12, { align: 'center' });
+    
+    // Add subtitle with generation info
+    pdf.setFontSize(9);
+    pdf.setTextColor(100);
+    pdf.text(
+      `Generated on ${new Date().toLocaleDateString('en-US')} at ${new Date().toLocaleTimeString('en-US')}`,
+      pageWidth / 2, 
+      18, 
+      { align: 'center' }
+    );
+    pdf.setTextColor(0);
 
-    // Calculate image dimensions
-    const maxWidth = pageWidth - 20;
-    const maxHeight = pageHeight - 40; // Space for title and margins
-    const imgWidth = maxWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    // Calculate image dimensions with margins
+    const margin = 15;
+    const maxWidth = pageWidth - (2 * margin);
+    const maxHeight = pageHeight - 30; // Space for title and margins
+    
+    // Calculate scale to fit
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const widthScale = maxWidth / (imgWidth / 3.7795); // Convert px to mm
+    const heightScale = maxHeight / (imgHeight / 3.7795);
+    const scale = Math.min(widthScale, heightScale);
+    
+    const finalWidth = (imgWidth / 3.7795) * scale;
+    const finalHeight = (imgHeight / 3.7795) * scale;
+    
+    // Center the image
+    const xOffset = (pageWidth - finalWidth) / 2;
+    const yOffset = 25; // Below title
 
     // Add image
     const imgData = canvas.toDataURL('image/png');
-    
-    if (imgHeight <= maxHeight) {
-      // Fits on one page
-      pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
-    } else {
-      // Scale down to fit
-      const scaledHeight = maxHeight;
-      const scaledWidth = (canvas.width * scaledHeight) / canvas.height;
-      pdf.addImage(imgData, 'PNG', (pageWidth - scaledWidth) / 2, 25, scaledWidth, scaledHeight);
+    pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
+
+    // Add footer with filter information
+    const activeProviders = data.providers.filter(p => options.includeProviderIds.includes(p.id));
+    if (activeProviders.length < data.providers.length) {
+      pdf.setFontSize(8);
+      pdf.setTextColor(100);
+      const footerY = pageHeight - 10;
+      pdf.text(
+        `Showing: ${activeProviders.map(p => p.name).join(', ')}`,
+        pageWidth / 2,
+        footerY,
+        { align: 'center' }
+      );
     }
 
     // Generate filename
@@ -326,6 +403,6 @@ export const exportToPdf = async (
     if (!calendarElementId) {
       throw new Error('Calendar element ID is required for calendar view export');
     }
-    await generateCalendarPdf(calendarElementId, options);
+    await generateCalendarPdf(calendarElementId, options, data);
   }
 }; 

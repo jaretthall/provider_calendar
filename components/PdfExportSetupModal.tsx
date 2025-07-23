@@ -7,9 +7,15 @@ import SpinnerIcon from './icons/SpinnerIcon';
 
 interface PdfExportSetupModalProps {
   onClose: () => void;
+  currentCalendarViewMode?: CalendarViewMode;
+  onSetCalendarViewMode?: (mode: CalendarViewMode) => void;
 }
 
-const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({ onClose }) => {
+const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({ 
+  onClose, 
+  currentCalendarViewMode, 
+  onSetCalendarViewMode 
+}) => {
   const appContext = useContext(AppContext);
   const toastContext = useContext(ToastContext);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -112,8 +118,24 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({ onClose }) =>
         options
       };
 
+      // For calendar view, temporarily switch to the selected view mode
+      let originalViewMode: CalendarViewMode | undefined;
+      if (options.viewType === 'calendar' && onSetCalendarViewMode && currentCalendarViewMode) {
+        originalViewMode = currentCalendarViewMode;
+        if (options.calendarView !== currentCalendarViewMode) {
+          onSetCalendarViewMode(options.calendarView);
+          // Give the calendar time to re-render
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
       const calendarElementId = options.viewType === 'calendar' ? 'main-calendar-grid' : undefined;
       await exportToPdf(data, calendarElementId);
+      
+      // Restore original view mode if it was changed
+      if (originalViewMode && onSetCalendarViewMode && originalViewMode !== options.calendarView) {
+        onSetCalendarViewMode(originalViewMode);
+      }
       
       addToast('PDF generated successfully!', 'success');
       onClose();
@@ -218,8 +240,11 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({ onClose }) =>
       {options.viewType === 'calendar' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Calendar View
+            Calendar View Type
           </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Choose which calendar view to capture. Week view shows more detailed information.
+          </p>
                      <select
              value={options.calendarView}
              onChange={(e) => handleInputChange('calendarView', e.target.value as CalendarViewMode)}
