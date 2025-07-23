@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npm run dev:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run build:prod:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(timeout 30s npm run build:prod)"
     ],
     "deny": []
   }

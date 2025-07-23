@@ -223,19 +223,6 @@ export const generatePdfFromHtml = async (
     // Remove temporary container
     document.body.removeChild(container);
 
-    // Get paper dimensions
-    const paperConfig = PAPER_SIZES[options.paperSize];
-    const isLandscape = options.orientation === 'landscape';
-    const pageWidth = isLandscape ? paperConfig.height : paperConfig.width;
-    const pageHeight = isLandscape ? paperConfig.width : paperConfig.height;
-
-    // Create PDF
-    const pdf = new jsPDF({
-      orientation: options.orientation,
-      unit: 'mm',
-      format: options.paperSize
-    });
-
     // Calculate dimensions with margins
     const margin = 15; // 15mm margins
     const contentWidth = pageWidth - (2 * margin);
