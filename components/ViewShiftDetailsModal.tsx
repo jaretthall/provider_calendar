@@ -102,7 +102,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
                                 </p>
                                 {s.notes && <p className="text-xs text-gray-500 mt-1 truncate">Notes: {s.notes}</p>}
                             </div>
-                            {s.isVacation && (
+                            {s.isVacation && isAdmin && (
                                 <button 
                                     onClick={() => handleEditShiftFromList(s)}
                                     className="p-2 text-blue-600 hover:text-blue-800 rounded-md hover:bg-blue-100"
@@ -116,7 +116,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
                 );
             })}
              <div className="flex justify-between items-center pt-4">
-                {instanceDateContext && (
+                {instanceDateContext && isAdmin && (
                     <button 
                         type="button" 
                         onClick={handleNewShiftFromList}

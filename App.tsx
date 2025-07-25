@@ -96,22 +96,8 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  // Show login form if not authenticated and Supabase is configured
-  if (!isAuthenticated && isSupabaseConfigured()) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Clinica Provider Schedule</h1>
-            <p className="text-gray-600">Please sign in to continue</p>
-          </div>
-          <LoginForm onClose={() => {}} />
-        </div>
-      </div>
-    );
-  }
-
-  // Render the main application
+  // Always render the main application - anonymous users get read-only access
+  // The authentication state is handled within the app components
   return <MainApplication />;
 };
 

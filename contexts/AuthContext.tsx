@@ -21,11 +21,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { addToast } = toastContext;
 
   useEffect(() => {
-    // Initialize authentication state (auto-authenticate in anonymous mode)
+    // Initialize authentication state
     initializeAuth();
 
-    // QUICK FIX: Disable auth state listener since we're using anonymous access
-    console.log('Running in anonymous mode - auth state listener disabled');
+    // Set up auth state listener for real authentication
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        if (session?.user) {
+          // User is signed in - load their profile
+          await loadUserProfile(session.user.id);
+        } else {
+          // User is signed out - set as anonymous
+          setUser(null);
+          setIsAuthenticated(false);
+          setIsLoading(false);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, []);
 
   const initializeAuth = async () => {
@@ -37,31 +55,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      // QUICK FIX: Auto-authenticate without requiring login
-      console.log('Auto-authenticating without login (anonymous mode)...');
+      // Check if user is already authenticated
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      // Create a mock admin user for anonymous access
-      const mockUser: User = {
-        id: 'anonymous-admin',
-        email: 'admin@clinica.local',
-        role: UserRole.ADMIN,
-        firstName: 'Anonymous',
-        lastName: 'Admin',
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setIsLoading(false);
+      if (error) {
+        console.error('Error getting session:', error);
+      }
       
-      console.log('Auto-authentication complete - user has admin access');
-      addToast('Application loaded successfully', 'success');
+      if (session?.user) {
+        // User is already signed in - load their profile
+        console.log('User already authenticated:', session.user.email);
+        await loadUserProfile(session.user.id);
+      } else {
+        // User is anonymous - allow read-only access
+        console.log('Anonymous user - read-only access enabled');
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoading(false);
+      }
       
     } catch (error) {
       console.error('Error initializing auth:', error);
-      addToast('Error connecting to authentication service', 'error');
+      // If auth fails, allow anonymous access
+      setUser(null);
+      setIsAuthenticated(false);
       setIsLoading(false);
     }
   };
@@ -77,11 +94,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       console.log('Fetching user profile from database...');
-      const { data: profile, error } = await supabase
+      
+      // Add timeout to prevent hanging
+      const profilePromise = supabase
         .from('user_profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+      );
+      
+      const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
 
       console.log('User profile query result:', { profile, error });
 
@@ -99,7 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (profile) {
         console.log('User profile found, creating user data...');
         const userData: User = {
-          id: profile.user_id,
+          id: profile.id,
           email: profile.email,
           role: profile.role as UserRole,
           firstName: profile.first_name || undefined,
@@ -120,7 +145,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
-      addToast(`Failed to load user profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      
+      if (error instanceof Error && error.message === 'Profile query timeout') {
+        console.error('Profile query timed out - proceeding with mock user');
+        // Create a temporary user to prevent hanging
+        const mockUser: User = {
+          id: userId,
+          email: 'unknown@example.com',
+          role: UserRole.ADMIN,
+          firstName: 'User',
+          lastName: '',
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setUser(mockUser);
+        setIsAuthenticated(true);
+        addToast('Profile loading timed out - using temporary access', 'warning');
+      } else {
+        addToast(`Failed to load user profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     } finally {
       console.log('Setting isLoading to false');
       setIsLoading(false);

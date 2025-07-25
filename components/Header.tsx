@@ -25,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({
   onNavigateToday, 
   onExportData 
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, signOut } = useAuth();
   const { canEdit } = usePermissions();
   const modalContext = useContext(ModalContext);
   
@@ -92,15 +92,17 @@ const Header: React.FC<HeaderProps> = ({
               <span>New Shift</span>
             </button>
           )}
-           <button
-            onClick={() => openModal('IMPORT_DATA_FORM')}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
-            title="Import providers, clinics, assistants, and shifts from JSON"
-          >
-            <UploadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Import Data</span>
-            <span className="sm:hidden">Import</span>
-          </button>
+           {canEdit && (
+            <button
+              onClick={() => openModal('IMPORT_DATA_FORM')}
+              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+              title="Import providers, clinics, assistants, and shifts from JSON"
+            >
+              <UploadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Import Data</span>
+              <span className="sm:hidden">Import</span>
+            </button>
+          )}
           <button
             onClick={() => openModal('EXPORT_OPTIONS_MODAL' as ModalType, { 
               onExportJson: onExportData,
@@ -132,6 +134,13 @@ const Header: React.FC<HeaderProps> = ({
               <span className="text-xs sm:text-sm text-gray-600">
                 {canEdit ? 'Admin' : 'User'} ({user?.email?.split('@')[0] || 'User'})
               </span>
+              <button
+                onClick={signOut}
+                className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                title="Sign out"
+              >
+                Sign Out
+              </button>
             </div>
           ) : (
             <button
