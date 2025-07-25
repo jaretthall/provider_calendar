@@ -107,6 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
   const [clinicsOpen, setClinicsOpen] = useState(true);
   const [medicalAssistantsOpen, setMedicalAssistantsOpen] = useState(true);
   const [optionsOpen, setOptionsOpen] = useState(true);
+  const [showUserManagement, setShowUserManagement] = useState(false);
   
   const optionsSectionId = "options-section";
   const providersSectionId = "providers-section";
@@ -387,6 +388,29 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               </ul>
             )}
           </div>
+
+          {/* User Management Section - Admin Only */}
+          {isAdmin && (
+            <div className="px-3 mt-4 border-t border-gray-700 pt-4">
+              <button
+                onClick={() => setShowUserManagement(!showUserManagement)}
+                className="flex items-center text-sm font-medium text-gray-100 hover:text-white py-2 px-1 rounded-md focus:outline-none focus:ring-1 focus:ring-white w-full text-left"
+              >
+                <UsersIcon className="w-4 h-4 mr-1 flex-shrink-0" /> User Management
+                <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${showUserManagement ? 'rotate-90' : ''}`} />
+              </button>
+              {showUserManagement && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => openModal('USER_MANAGEMENT')}
+                    className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-gray-700 text-gray-200"
+                  >
+                    Manage Users
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
       </aside>
     </>

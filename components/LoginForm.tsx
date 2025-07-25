@@ -8,18 +8,14 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
-  const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin');
+  const [mode, setMode] = useState<'signin' | 'reset'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState<UserRole>(UserRole.VIEW_ONLY);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const { signIn, signUp, resetPassword, isLoading } = useAuth();
+  const { signIn, resetPassword, isLoading } = useAuth();
 
   if (!isSupabaseConfigured()) {
     return (
@@ -62,34 +58,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
         } else {
           setError(result.error || 'Sign in failed');
         }
-      } else if (mode === 'signup') {
-        if (!email || !password || !confirmPassword) {
-          setError('Please fill in all required fields');
-          return;
-        }
-
-        if (password !== confirmPassword) {
-          setError('Passwords do not match');
-          return;
-        }
-
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters long');
-          return;
-        }
-
-        const result = await signUp(email, password, firstName, lastName, role);
-        if (result.success) {
-          setMessage('Account created successfully! Please check your email to verify your account.');
-          setMode('signin');
-          // Clear form
-          setPassword('');
-          setConfirmPassword('');
-          setFirstName('');
-          setLastName('');
-        } else {
-          setError(result.error || 'Sign up failed');
-        }
       } else if (mode === 'reset') {
         if (!email) {
           setError('Please enter your email address');
@@ -119,7 +87,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-gray-900">
             {mode === 'signin' && 'Sign In'}
-            {mode === 'signup' && 'Create Account'}
             {mode === 'reset' && 'Reset Password'}
           </h2>
           <button
@@ -183,76 +150,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
             </div>
           )}
 
-          {mode === 'signup' && (
-            <>
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Confirm your password"
-                  disabled={isFormDisabled}
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="First name"
-                    disabled={isFormDisabled}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Last name"
-                    disabled={isFormDisabled}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                  Role
-                </label>
-                <select
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isFormDisabled}
-                >
-                  <option value={UserRole.VIEW_ONLY}>View Only</option>
-                  <option value={UserRole.ADMIN}>Admin</option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Note: The first user will automatically become an admin regardless of this setting.
-                </p>
-              </div>
-            </>
-          )}
 
           <button
             type="submit"
@@ -270,7 +167,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
             ) : (
               <>
                 {mode === 'signin' && 'Sign In'}
-                {mode === 'signup' && 'Create Account'}
                 {mode === 'reset' && 'Send Reset Email'}
               </>
             )}
@@ -288,18 +184,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onClose }) => {
               >
                 Forgot your password?
               </button>
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className="w-full text-sm text-blue-600 hover:text-blue-700 underline"
-                disabled={isFormDisabled}
-              >
-                Don't have an account? Sign up
-              </button>
             </>
           )}
 
-          {(mode === 'signup' || mode === 'reset') && (
+          {mode === 'reset' && (
             <button
               type="button"
               onClick={() => setMode('signin')}

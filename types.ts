@@ -151,7 +151,8 @@ export type ModalType =
   | 'LOGIN_FORM'
   | 'SIGNUP_FORM'
   | 'USER_PROFILE'
-  | 'SUPABASE_TEST';
+  | 'SUPABASE_TEST'
+  | 'USER_MANAGEMENT';
 
 export interface ModalState {
   type: ModalType | null;

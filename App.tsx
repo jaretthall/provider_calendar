@@ -30,6 +30,7 @@ import SettingsForm from './components/SettingsForm';
 import ExportOptionsModal from './components/ExportOptionsModal';
 import PdfExportSetupModal from './components/PdfExportSetupModal';
 import LoginForm from './components/LoginForm';
+import UserManagement from './components/UserManagement';
 import ErrorBoundary from './components/ErrorBoundary';
 import Footer from './components/Footer';
 import { ToastContainer } from './components/Toast';
@@ -944,6 +945,8 @@ const MainApplication: React.FC = () => {
         return 'PDF Export Configuration';
              case 'LOGIN_FORM':
          return 'Sign In';
+       case 'USER_MANAGEMENT':
+         return 'User Management';
        default:
         return 'Modal';
     }
@@ -968,6 +971,8 @@ const MainApplication: React.FC = () => {
       case 'PDF_EXPORT_SETUP_MODAL':
              case 'LOGIN_FORM':
          return 'md';
+       case 'USER_MANAGEMENT':
+         return '3xl';
        default:
         return 'md';
     }
@@ -1096,6 +1101,7 @@ const MainApplication: React.FC = () => {
                 {modalState.type === 'EXPORT_OPTIONS_MODAL' && <ExportOptionsModal {...modalState.props} isSubmitting={isSubmitting} onClose={closeModal} />}
                 {modalState.type === 'PDF_EXPORT_SETUP_MODAL' && <PdfExportSetupModal {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'LOGIN_FORM' && <LoginForm {...modalState.props} />}
+                {modalState.type === 'USER_MANAGEMENT' && <UserManagement />}
                 
               </Modal>
               
