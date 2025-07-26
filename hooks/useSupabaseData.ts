@@ -4,6 +4,9 @@ import {
   Provider, 
   ClinicType, 
   MedicalAssistant, 
+  FrontStaff,
+  Billing,
+  BehavioralHealth,
   Shift, 
   UserSettings 
 } from '../types';
@@ -772,5 +775,353 @@ export function useSupabaseUserSettings(defaultValue: UserSettings, userId?: str
     error: null,
     refetch: async () => {},
     isOnline: true
+  };
+}
+
+// Front Staff Hook
+export function useSupabaseFrontStaff(defaultValue: FrontStaff[] = []) {
+  const [data, setData] = useState<FrontStaff[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch front staff from Supabase
+  const fetchFrontStaff = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching front staff');
+      
+      const { data: frontStaff, error: fetchError } = await supabase!
+        .from(TABLES.FRONT_STAFF)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedFrontStaff = (frontStaff || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedFrontStaff);
+      console.log('✅ Successfully fetched front staff:', transformedFrontStaff.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch front staff';
+      setError(errorMessage);
+      console.error('❌ Error fetching front staff:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update front staff with proper upsert logic
+  const updateFrontStaff = useCallback(async (newFrontStaff: FrontStaff[] | ((prev: FrontStaff[]) => FrontStaff[])) => {
+    const frontStaffToSet = typeof newFrontStaff === 'function' 
+      ? newFrontStaff(data)
+      : newFrontStaff;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating front staff in Supabase');
+
+      // Get current user ID
+      const { data: { user } } = await supabase!.auth.getUser();
+      const currentUserId = user?.id;
+
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Transform to Supabase format
+      const supabaseFrontStaff = frontStaffToSet.map(fs => ({
+        id: fs.id,
+        name: fs.name,
+        color: fs.color,
+        is_active: fs.isActive,
+        created_at: fs.createdAt,
+        updated_at: fs.updatedAt,
+        user_id: currentUserId
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.FRONT_STAFF)
+        .upsert(supabaseFrontStaff, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(frontStaffToSet);
+      console.log('✅ Successfully updated front staff');
+      
+      // Refetch to ensure consistency
+      await fetchFrontStaff();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update front staff';
+      setError(errorMessage);
+      console.error('❌ Error updating front staff:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchFrontStaff]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchFrontStaff();
+    }
+  }, [isOnline, fetchFrontStaff]);
+
+  return {
+    data,
+    setData: updateFrontStaff,
+    loading,
+    error,
+    refetch: fetchFrontStaff,
+    isOnline
+  };
+}
+
+// Billing Hook
+export function useSupabaseBilling(defaultValue: Billing[] = []) {
+  const [data, setData] = useState<Billing[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch billing from Supabase
+  const fetchBilling = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching billing');
+      
+      const { data: billing, error: fetchError } = await supabase!
+        .from(TABLES.BILLING)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedBilling = (billing || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedBilling);
+      console.log('✅ Successfully fetched billing:', transformedBilling.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch billing';
+      setError(errorMessage);
+      console.error('❌ Error fetching billing:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update billing with proper upsert logic
+  const updateBilling = useCallback(async (newBilling: Billing[] | ((prev: Billing[]) => Billing[])) => {
+    const billingToSet = typeof newBilling === 'function' 
+      ? newBilling(data)
+      : newBilling;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating billing in Supabase');
+
+      // Get current user ID
+      const { data: { user } } = await supabase!.auth.getUser();
+      const currentUserId = user?.id;
+
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Transform to Supabase format
+      const supabaseBilling = billingToSet.map(b => ({
+        id: b.id,
+        name: b.name,
+        color: b.color,
+        is_active: b.isActive,
+        created_at: b.createdAt,
+        updated_at: b.updatedAt,
+        user_id: currentUserId
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.BILLING)
+        .upsert(supabaseBilling, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(billingToSet);
+      console.log('✅ Successfully updated billing');
+      
+      // Refetch to ensure consistency
+      await fetchBilling();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update billing';
+      setError(errorMessage);
+      console.error('❌ Error updating billing:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchBilling]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchBilling();
+    }
+  }, [isOnline, fetchBilling]);
+
+  return {
+    data,
+    setData: updateBilling,
+    loading,
+    error,
+    refetch: fetchBilling,
+    isOnline
+  };
+}
+
+// Behavioral Health Hook
+export function useSupabaseBehavioralHealth(defaultValue: BehavioralHealth[] = []) {
+  const [data, setData] = useState<BehavioralHealth[]>(defaultValue);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isOnline = isSupabaseConfigured();
+
+  // Fetch behavioral health from Supabase
+  const fetchBehavioralHealth = useCallback(async () => {
+    if (!isOnline) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching behavioral health');
+      
+      const { data: behavioralHealth, error: fetchError } = await supabase!
+        .from(TABLES.BEHAVIORAL_HEALTH)
+        .select('*')
+        .order('created_at');
+
+      if (fetchError) throw fetchError;
+
+      const transformedBehavioralHealth = (behavioralHealth || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        color: item.color,
+        isActive: item.is_active,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+
+      setData(transformedBehavioralHealth);
+      console.log('✅ Successfully fetched behavioral health:', transformedBehavioralHealth.length);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch behavioral health';
+      setError(errorMessage);
+      console.error('❌ Error fetching behavioral health:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline]);
+
+  // Update behavioral health with proper upsert logic
+  const updateBehavioralHealth = useCallback(async (newBehavioralHealth: BehavioralHealth[] | ((prev: BehavioralHealth[]) => BehavioralHealth[])) => {
+    const behavioralHealthToSet = typeof newBehavioralHealth === 'function' 
+      ? newBehavioralHealth(data)
+      : newBehavioralHealth;
+
+    if (!isOnline) {
+      throw new Error('Supabase not available');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('💾 Updating behavioral health in Supabase');
+
+      // Get current user ID
+      const { data: { user } } = await supabase!.auth.getUser();
+      const currentUserId = user?.id;
+
+      if (!currentUserId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Transform to Supabase format
+      const supabaseBehavioralHealth = behavioralHealthToSet.map(bh => ({
+        id: bh.id,
+        name: bh.name,
+        color: bh.color,
+        is_active: bh.isActive,
+        created_at: bh.createdAt,
+        updated_at: bh.updatedAt,
+        user_id: currentUserId
+      }));
+
+      // Use upsert instead of delete-all-insert
+      const { error: upsertError } = await supabase!
+        .from(TABLES.BEHAVIORAL_HEALTH)
+        .upsert(supabaseBehavioralHealth, { onConflict: 'id' });
+
+      if (upsertError) throw upsertError;
+
+      setData(behavioralHealthToSet);
+      console.log('✅ Successfully updated behavioral health');
+      
+      // Refetch to ensure consistency
+      await fetchBehavioralHealth();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update behavioral health';
+      setError(errorMessage);
+      console.error('❌ Error updating behavioral health:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [isOnline, data, fetchBehavioralHealth]);
+
+  // Initial fetch
+  useEffect(() => {
+    if (isOnline) {
+      fetchBehavioralHealth();
+    }
+  }, [isOnline, fetchBehavioralHealth]);
+
+  return {
+    data,
+    setData: updateBehavioralHealth,
+    loading,
+    error,
+    refetch: fetchBehavioralHealth,
+    isOnline
   };
 } 

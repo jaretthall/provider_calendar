@@ -14,6 +14,12 @@ export interface ClinicType extends UniqueItem {}
 
 export interface MedicalAssistant extends UniqueItem {} // New MA interface
 
+export interface FrontStaff extends UniqueItem {}
+
+export interface Billing extends UniqueItem {}
+
+export interface BehavioralHealth extends UniqueItem {}
+
 export enum RecurringFrequency {
   NONE = 'NONE',
   DAILY = 'DAILY',
@@ -35,6 +41,9 @@ export interface Shift {
   providerId: string;
   clinicTypeId?: string; 
   medicalAssistantIds?: string[]; // Added MAs to shifts
+  frontStaffIds?: string[]; // Added Front Staff to shifts
+  billingIds?: string[]; // Added Billing to shifts
+  behavioralHealthIds?: string[]; // Added Behavioral Health to shifts
   title?: string; 
   startDate: string; 
   endDate: string; 
@@ -97,6 +106,9 @@ export interface AppContextType {
   providers: Provider[];
   clinics: ClinicType[];
   medicalAssistants: MedicalAssistant[]; // Added MAs
+  frontStaff: FrontStaff[];
+  billing: Billing[];
+  behavioralHealth: BehavioralHealth[];
   shifts: Shift[];
   addProvider: (provider: Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateProvider: (provider: Provider) => Promise<void>;
@@ -107,13 +119,25 @@ export interface AppContextType {
   addMedicalAssistant: (ma: Omit<MedicalAssistant, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>; // MA CRUD
   updateMedicalAssistant: (ma: MedicalAssistant) => Promise<void>; // MA CRUD
   deleteMedicalAssistant: (maId: string) => Promise<void>; // MA CRUD
+  addFrontStaff: (fs: Omit<FrontStaff, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateFrontStaff: (fs: FrontStaff) => Promise<void>;
+  deleteFrontStaff: (fsId: string) => Promise<void>;
+  addBilling: (billing: Omit<Billing, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBilling: (billing: Billing) => Promise<void>;
+  deleteBilling: (billingId: string) => Promise<void>;
+  addBehavioralHealth: (bh: Omit<BehavioralHealth, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateBehavioralHealth: (bh: BehavioralHealth) => Promise<void>;
+  deleteBehavioralHealth: (bhId: string) => Promise<void>;
   addShift: (shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt' | 'color' | 'title' | 'seriesId'>, isCreatingException?: boolean) => Promise<Shift | null>;
   updateShift: (shift: Shift) => Promise<void>;
   deleteShift: (shiftId: string, seriesId?: string, deleteAllOccurrences?: boolean, deleteInstanceDate?: string) => Promise<void>;
-  importData: (data: { providers?: Provider[], clinics?: ClinicType[], medicalAssistants?: MedicalAssistant[], shifts?: Shift[] }) => Promise<void>; // Added MAs to import
+  importData: (data: { providers?: Provider[], clinics?: ClinicType[], medicalAssistants?: MedicalAssistant[], frontStaff?: FrontStaff[], billing?: Billing[], behavioralHealth?: BehavioralHealth[], shifts?: Shift[] }) => Promise<void>;
   getProviderById: (id: string) => Provider | undefined;
   getClinicTypeById: (id: string) => ClinicType | undefined;
   getMedicalAssistantById: (id: string) => MedicalAssistant | undefined; // MA getter
+  getFrontStaffById: (id: string) => FrontStaff | undefined;
+  getBillingById: (id: string) => Billing | undefined;
+  getBehavioralHealthById: (id: string) => BehavioralHealth | undefined;
   getShiftById: (id: string) => Shift | undefined;
 }
 
@@ -139,6 +163,9 @@ export type ModalType =
   | 'PROVIDER_FORM' 
   | 'CLINIC_TYPE_FORM' 
   | 'MEDICAL_ASSISTANT_FORM' 
+  | 'FRONT_STAFF_FORM'
+  | 'BILLING_FORM'
+  | 'BEHAVIORAL_HEALTH_FORM'
   | 'SHIFT_FORM' 
   | 'IMPORT_DATA_FORM' 
   | 'VIEW_SHIFT_DETAILS' 
@@ -177,5 +204,8 @@ export interface FilterState {
   providerIds: string[];
   clinicTypeIds: string[];
   medicalAssistantIds: string[]; // Added MA filter
+  frontStaffIds: string[];
+  billingIds: string[];
+  behavioralHealthIds: string[];
   showVacations: boolean;
 }

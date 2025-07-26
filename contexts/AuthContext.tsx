@@ -99,11 +99,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const profilePromise = supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+        .eq('user_id', userId)
+        .single();
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
       );
       
       const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;

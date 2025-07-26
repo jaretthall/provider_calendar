@@ -128,16 +128,27 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
     });
 
     const relevantShifts = allShifts.filter(shift => {
-        const providerMatch = filters.providerIds.length === 0 || filters.providerIds.includes(shift.providerId);
-        const maMatch = filters.medicalAssistantIds.length === 0 || (shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
-        const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
+        // New inverted logic: show all by default, hide if selected in filters
+        const providerMatch = filters.providerIds.length === 0 || !filters.providerIds.includes(shift.providerId);
+        const maMatch = filters.medicalAssistantIds.length === 0 || !(shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
+        const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || !(shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
+        
+        // Check new staff types - hide if selected
+        const frontStaffMatch = filters.frontStaffIds.length === 0 || !(shift.frontStaffIds && shift.frontStaffIds.some(fsId => filters.frontStaffIds.includes(fsId)));
+        const billingMatch = filters.billingIds.length === 0 || !(shift.billingIds && shift.billingIds.some(bId => filters.billingIds.includes(bId)));
+        const behavioralHealthMatch = filters.behavioralHealthIds.length === 0 || !(shift.behavioralHealthIds && shift.behavioralHealthIds.some(bhId => filters.behavioralHealthIds.includes(bhId)));
+        
+        // Vacation logic: show if showVacations is true, hide if false
         const vacationMatchOverall = shift.isVacation ? filters.showVacations : true;
         
-        if (shift.isVacation && filters.showVacations) {
-            if (filters.providerIds.length > 0 && !filters.providerIds.includes(shift.providerId)) return false;
+        if (shift.isVacation) {
+            if (!filters.showVacations) return false;
+            // For vacation shifts, still apply provider hiding if provider is selected to be hidden
+            if (filters.providerIds.length > 0 && filters.providerIds.includes(shift.providerId)) return false;
             return true;
         }
-        return providerMatch && maMatch && clinicMatch && vacationMatchOverall;
+        
+        return providerMatch && maMatch && clinicMatch && frontStaffMatch && billingMatch && behavioralHealthMatch && vacationMatchOverall;
     });
 
     relevantShifts.forEach(shift => {

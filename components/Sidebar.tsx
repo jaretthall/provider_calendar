@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
 import { AppContext, ModalContext, ToastContext } from '../App';
-import { Provider, ClinicType, FilterState, MedicalAssistant } from '../types';
+import { Provider, ClinicType, FilterState, MedicalAssistant, FrontStaff, Billing, BehavioralHealth } from '../types';
 import { usePermissions } from '../hooks/useAuth';
 
 import PlusIcon from './icons/PlusIcon';
@@ -97,7 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
 
   if (!appContext || !modalContext || !toastContext) throw new Error("Context not found");
 
-  const { providers, clinics, medicalAssistants, deleteProvider, deleteClinicType, deleteMedicalAssistant } = appContext;
+  const { providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth, deleteProvider, deleteClinicType, deleteMedicalAssistant, deleteFrontStaff, deleteBilling, deleteBehavioralHealth } = appContext;
 
 
   const { openModal } = modalContext;
@@ -106,6 +106,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
   const [providersOpen, setProvidersOpen] = useState(true);
   const [clinicsOpen, setClinicsOpen] = useState(true);
   const [medicalAssistantsOpen, setMedicalAssistantsOpen] = useState(true);
+  const [frontStaffOpen, setFrontStaffOpen] = useState(true);
+  const [billingOpen, setBillingOpen] = useState(true);
+  const [behavioralHealthOpen, setBehavioralHealthOpen] = useState(true);
   const [optionsOpen, setOptionsOpen] = useState(true);
   const [showUserManagement, setShowUserManagement] = useState(false);
   
@@ -113,6 +116,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
   const providersSectionId = "providers-section";
   const clinicsSectionId = "clinics-section";
   const medicalAssistantsSectionId = "ma-section";
+  const frontStaffSectionId = "front-staff-section";
+  const billingSectionId = "billing-section";
+  const behavioralHealthSectionId = "behavioral-health-section";
 
 
   const handleProviderFilterChange = (providerId: string) => {
@@ -134,6 +140,27 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
       ? filters.medicalAssistantIds.filter(id => id !== maId)
       : [...filters.medicalAssistantIds, maId];
     onFiltersChange({ ...filters, medicalAssistantIds: newMAIds });
+  };
+
+  const handleFrontStaffFilterChange = (fsId: string) => {
+    const newFSIds = filters.frontStaffIds.includes(fsId)
+      ? filters.frontStaffIds.filter(id => id !== fsId)
+      : [...filters.frontStaffIds, fsId];
+    onFiltersChange({ ...filters, frontStaffIds: newFSIds });
+  };
+
+  const handleBillingFilterChange = (billingId: string) => {
+    const newBillingIds = filters.billingIds.includes(billingId)
+      ? filters.billingIds.filter(id => id !== billingId)
+      : [...filters.billingIds, billingId];
+    onFiltersChange({ ...filters, billingIds: newBillingIds });
+  };
+
+  const handleBehavioralHealthFilterChange = (bhId: string) => {
+    const newBHIds = filters.behavioralHealthIds.includes(bhId)
+      ? filters.behavioralHealthIds.filter(id => id !== bhId)
+      : [...filters.behavioralHealthIds, bhId];
+    onFiltersChange({ ...filters, behavioralHealthIds: newBHIds });
   };
 
   const handleShowVacationsChange = (show: boolean) => {
@@ -172,6 +199,42 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
             await deleteMedicalAssistant(ma.id);
         },
         confirmText: 'Delete MA',
+        confirmButtonClass: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    });
+  };
+
+  const handleDeleteFrontStaffFlow = (fs: FrontStaff) => {
+    openModal('CONFIRMATION_MODAL', {
+        title: 'Delete Front Staff',
+        message: `Are you sure you want to delete Front Staff "${fs.name}"? This will unassign them from all shifts.`,
+        onConfirm: async () => {
+            await deleteFrontStaff(fs.id);
+        },
+        confirmText: 'Delete Front Staff',
+        confirmButtonClass: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    });
+  };
+
+  const handleDeleteBillingFlow = (billing: Billing) => {
+    openModal('CONFIRMATION_MODAL', {
+        title: 'Delete Billing Staff',
+        message: `Are you sure you want to delete Billing Staff "${billing.name}"? This will unassign them from all shifts.`,
+        onConfirm: async () => {
+            await deleteBilling(billing.id);
+        },
+        confirmText: 'Delete Billing Staff',
+        confirmButtonClass: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+    });
+  };
+
+  const handleDeleteBehavioralHealthFlow = (bh: BehavioralHealth) => {
+    openModal('CONFIRMATION_MODAL', {
+        title: 'Delete Behavioral Health Staff',
+        message: `Are you sure you want to delete Behavioral Health Staff "${bh.name}"? This will unassign them from all shifts.`,
+        onConfirm: async () => {
+            await deleteBehavioralHealth(bh.id);
+        },
+        confirmText: 'Delete BH Staff',
         confirmButtonClass: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
     });
   };
@@ -230,6 +293,63 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
           </div>
 
+          {/* Building Section */}
+          <div className="px-3 mb-2">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setClinicsOpen(!clinicsOpen)} 
+                className="flex items-center text-sm font-medium text-gray-100 hover:text-white mb-1 py-1 px-1 rounded-md focus:outline-none focus:ring-1 focus:ring-white w-full text-left"
+                aria-expanded={clinicsOpen}
+                aria-controls={clinicsSectionId}
+              >
+                 <BriefcaseIcon className="w-4 h-4 mr-1 flex-shrink-0" /> Building
+                 <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${clinicsOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => openModal('CLINIC_TYPE_FORM')}
+                  className="p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1"
+                   title="Add Building"
+                   aria-label="Add New Building"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {clinicsOpen && (
+              <ul id={clinicsSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
+                {clinics.map(clinic => (
+                  <li key={clinic.id} className={`p-1.5 rounded-md group ${clinic.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center text-xs cursor-pointer w-full">
+                        <input
+                          type="checkbox"
+                          aria-labelledby={`clinic-name-${clinic.id}`}
+                          checked={filters.clinicTypeIds.includes(clinic.id)}
+                          onChange={() => handleClinicFilterChange(clinic.id)}
+                          className="h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-1.5 flex-shrink-0"
+                        />
+                        <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${clinic.color}`} aria-hidden="true"></span>
+                        <span id={`clinic-name-${clinic.id}`} className="truncate" title={clinic.name}>{clinic.name}</span>
+                        {!clinic.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
+                      </label>
+                       {isAdmin && (
+                        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button onClick={() => openModal('CLINIC_TYPE_FORM', { clinicType: clinic })} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Building" aria-label={`Edit building ${clinic.name}`}>
+                            <EditIcon className="w-3 h-3" />
+                          </button>
+                           <button onClick={() => handleDeleteClinicTypeFlow(clinic)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Building" aria-label={`Delete building ${clinic.name}`}>
+                            <TrashIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+                 {clinics.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No buildings yet.</li>}
+              </ul>
+            )}
+          </div>
 
           {/* Providers Section */}
           <div className="px-3 mb-2">
@@ -330,53 +450,52 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
             )}
           </div>
 
-
-          {/* Clinic Types Section */}
-          <div className="px-3">
+          {/* Front Staff Section */}
+          <div className="px-3 mb-2">
             <div className="flex items-center justify-between">
               <button 
-                onClick={() => setClinicsOpen(!clinicsOpen)} 
+                onClick={() => setFrontStaffOpen(!frontStaffOpen)} 
                 className="flex items-center text-sm font-medium text-gray-100 hover:text-white mb-1 py-1 px-1 rounded-md focus:outline-none focus:ring-1 focus:ring-white w-full text-left"
-                aria-expanded={clinicsOpen}
-                aria-controls={clinicsSectionId}
+                aria-expanded={frontStaffOpen}
+                aria-controls={frontStaffSectionId}
               >
-                 <BriefcaseIcon className="w-4 h-4 mr-1 flex-shrink-0" /> Clinic Types
-                 <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${clinicsOpen ? 'rotate-90' : ''}`} />
+                <UsersIcon className="w-4 h-4 mr-1 flex-shrink-0" /> Front Staff
+                <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${frontStaffOpen ? 'rotate-90' : ''}`} />
               </button>
               {isAdmin && (
                 <button
-                  onClick={() => openModal('CLINIC_TYPE_FORM')}
+                  onClick={() => openModal('FRONT_STAFF_FORM')}
                   className="p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1"
-                   title="Add Clinic Type"
-                   aria-label="Add New Clinic Type"
+                  title="Add Front Staff"
+                  aria-label="Add New Front Staff"
                 >
                   <PlusIcon className="w-4 h-4" />
                 </button>
               )}
             </div>
-            {clinicsOpen && (
-              <ul id={clinicsSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {clinics.map(clinic => (
-                  <li key={clinic.id} className={`p-1.5 rounded-md group ${clinic.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
+            {frontStaffOpen && (
+              <ul id={frontStaffSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
+                {frontStaff.map(fs => (
+                  <li key={fs.id} className={`p-1.5 rounded-md group ${fs.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
                         <input
                           type="checkbox"
-                          aria-labelledby={`clinic-name-${clinic.id}`}
-                          checked={filters.clinicTypeIds.includes(clinic.id)}
-                          onChange={() => handleClinicFilterChange(clinic.id)}
+                          aria-labelledby={`fs-name-${fs.id}`}
+                          checked={filters.frontStaffIds.includes(fs.id)}
+                          onChange={() => handleFrontStaffFilterChange(fs.id)}
                           className="h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-1.5 flex-shrink-0"
                         />
-                        <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${clinic.color}`} aria-hidden="true"></span>
-                        <span id={`clinic-name-${clinic.id}`} className="truncate" title={clinic.name}>{clinic.name}</span>
-                        {!clinic.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
+                        <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${fs.color}`} aria-hidden="true"></span>
+                        <span id={`fs-name-${fs.id}`} className="truncate" title={fs.name}>{fs.name}</span>
+                        {!fs.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
                       </label>
-                       {isAdmin && (
+                      {isAdmin && (
                         <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                          <button onClick={() => openModal('CLINIC_TYPE_FORM', { clinicType: clinic })} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Clinic Type" aria-label={`Edit clinic type ${clinic.name}`}>
+                          <button onClick={() => openModal('FRONT_STAFF_FORM', { frontStaff: fs })} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Front Staff" aria-label={`Edit Front Staff ${fs.name}`}>
                             <EditIcon className="w-3 h-3" />
                           </button>
-                           <button onClick={() => handleDeleteClinicTypeFlow(clinic)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Clinic Type" aria-label={`Delete clinic type ${clinic.name}`}>
+                          <button onClick={() => handleDeleteFrontStaffFlow(fs)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Front Staff" aria-label={`Delete Front Staff ${fs.name}`}>
                             <TrashIcon className="w-3 h-3" />
                           </button>
                         </div>
@@ -384,7 +503,123 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                 {clinics.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No clinic types yet.</li>}
+                {frontStaff.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No front staff yet.</li>}
+              </ul>
+            )}
+          </div>
+
+          {/* Billing Section */}
+          <div className="px-3 mb-2">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setBillingOpen(!billingOpen)} 
+                className="flex items-center text-sm font-medium text-gray-100 hover:text-white mb-1 py-1 px-1 rounded-md focus:outline-none focus:ring-1 focus:ring-white w-full text-left"
+                aria-expanded={billingOpen}
+                aria-controls={billingSectionId}
+              >
+                <BriefcaseIcon className="w-4 h-4 mr-1 flex-shrink-0" /> Billing
+                <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${billingOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => openModal('BILLING_FORM')}
+                  className="p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1"
+                  title="Add Billing Staff"
+                  aria-label="Add New Billing Staff"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {billingOpen && (
+              <ul id={billingSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
+                {billing.map(b => (
+                  <li key={b.id} className={`p-1.5 rounded-md group ${b.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center text-xs cursor-pointer w-full">
+                        <input
+                          type="checkbox"
+                          aria-labelledby={`billing-name-${b.id}`}
+                          checked={filters.billingIds.includes(b.id)}
+                          onChange={() => handleBillingFilterChange(b.id)}
+                          className="h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-1.5 flex-shrink-0"
+                        />
+                        <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${b.color}`} aria-hidden="true"></span>
+                        <span id={`billing-name-${b.id}`} className="truncate" title={b.name}>{b.name}</span>
+                        {!b.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
+                      </label>
+                      {isAdmin && (
+                        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button onClick={() => openModal('BILLING_FORM', { billing: b })} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Billing Staff" aria-label={`Edit Billing Staff ${b.name}`}>
+                            <EditIcon className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => handleDeleteBillingFlow(b)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Billing Staff" aria-label={`Delete Billing Staff ${b.name}`}>
+                            <TrashIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+                {billing.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No billing staff yet.</li>}
+              </ul>
+            )}
+          </div>
+
+          {/* Behavioral Health Section */}
+          <div className="px-3 mb-2">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setBehavioralHealthOpen(!behavioralHealthOpen)} 
+                className="flex items-center text-sm font-medium text-gray-100 hover:text-white mb-1 py-1 px-1 rounded-md focus:outline-none focus:ring-1 focus:ring-white w-full text-left"
+                aria-expanded={behavioralHealthOpen}
+                aria-controls={behavioralHealthSectionId}
+              >
+                <UsersGroupIcon className="w-4 h-4 mr-1 flex-shrink-0" /> Behavioral Health
+                <ChevronRightIcon className={`w-4 h-4 ml-auto transform transition-transform flex-shrink-0 ${behavioralHealthOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => openModal('BEHAVIORAL_HEALTH_FORM')}
+                  className="p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1"
+                  title="Add Behavioral Health Staff"
+                  aria-label="Add New Behavioral Health Staff"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {behavioralHealthOpen && (
+              <ul id={behavioralHealthSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
+                {behavioralHealth.map(bh => (
+                  <li key={bh.id} className={`p-1.5 rounded-md group ${bh.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center text-xs cursor-pointer w-full">
+                        <input
+                          type="checkbox"
+                          aria-labelledby={`bh-name-${bh.id}`}
+                          checked={filters.behavioralHealthIds.includes(bh.id)}
+                          onChange={() => handleBehavioralHealthFilterChange(bh.id)}
+                          className="h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-1.5 flex-shrink-0"
+                        />
+                        <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${bh.color}`} aria-hidden="true"></span>
+                        <span id={`bh-name-${bh.id}`} className="truncate" title={bh.name}>{bh.name}</span>
+                        {!bh.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
+                      </label>
+                      {isAdmin && (
+                        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <button onClick={() => openModal('BEHAVIORAL_HEALTH_FORM', { behavioralHealth: bh })} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Behavioral Health Staff" aria-label={`Edit Behavioral Health Staff ${bh.name}`}>
+                            <EditIcon className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => handleDeleteBehavioralHealthFlow(bh)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Behavioral Health Staff" aria-label={`Delete Behavioral Health Staff ${bh.name}`}>
+                            <TrashIcon className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+                {behavioralHealth.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No behavioral health staff yet.</li>}
               </ul>
             )}
           </div>

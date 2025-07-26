@@ -2,11 +2,12 @@ import React, { useContext } from 'react';
 import { APP_NAME } from '../constants';
 import { ModalContext } from '../App';
 import { useAuth, usePermissions } from '../hooks/useAuth';
-import { CalendarViewMode, ModalType } from '../types';
+import { CalendarViewMode, ModalType, FilterState } from '../types';
 import CalendarIcon from './icons/CalendarIcon';
 import UploadIcon from './icons/UploadIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import CogIcon from './icons/CogIcon';
+import DepartmentFilter from './DepartmentFilter';
 
 interface HeaderProps {
   currentViewDate: Date; // For "New Shift" button context
@@ -15,6 +16,21 @@ interface HeaderProps {
   centralDateDisplay: string;
   onNavigateToday: () => void;
   onExportData: () => void;
+  filters: FilterState;
+  onFiltersChange: (newFilters: FilterState) => void;
+  providerCount: number;
+  maCount: number;
+  frontStaffCount: number;
+  billingCount: number;
+  behavioralHealthCount: number;
+  buildingCount: number;
+  // Data arrays needed for filter functionality
+  providers: any[];
+  medicalAssistants: any[];
+  frontStaff: any[];
+  billing: any[];
+  behavioralHealth: any[];
+  clinics: any[];
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -23,7 +39,21 @@ const Header: React.FC<HeaderProps> = ({
   onSetCalendarViewMode,
   centralDateDisplay,
   onNavigateToday, 
-  onExportData 
+  onExportData,
+  filters,
+  onFiltersChange,
+  providerCount,
+  maCount,
+  frontStaffCount,
+  billingCount,
+  behavioralHealthCount,
+  buildingCount,
+  providers,
+  medicalAssistants,
+  frontStaff,
+  billing,
+  behavioralHealth,
+  clinics
 }) => {
   const { user, isAuthenticated, signOut } = useAuth();
   const { canEdit } = usePermissions();
@@ -77,6 +107,22 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         
         <div className="flex items-center space-x-2 sm:space-x-3 self-end sm:self-center">
+          <DepartmentFilter
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            providerCount={providerCount}
+            maCount={maCount}
+            frontStaffCount={frontStaffCount}
+            billingCount={billingCount}
+            behavioralHealthCount={behavioralHealthCount}
+            buildingCount={buildingCount}
+            providers={providers}
+            medicalAssistants={medicalAssistants}
+            frontStaff={frontStaff}
+            billing={billing}
+            behavioralHealth={behavioralHealth}
+            clinics={clinics}
+          />
            <button
             onClick={onNavigateToday}
             className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"

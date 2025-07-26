@@ -21,6 +21,9 @@ import Modal from './components/Modal';
 import ProviderForm from './components/ProviderForm';
 import ClinicTypeForm from './components/ClinicTypeForm';
 import MedicalAssistantForm from './components/MedicalAssistantForm';
+import FrontStaffForm from './components/FrontStaffForm';
+import BillingForm from './components/BillingForm';
+import BehavioralHealthForm from './components/BehavioralHealthForm';
 import ShiftForm from './components/ShiftForm';
 import ImportDataForm from './components/ImportDataForm';
 import ViewShiftDetailsModal from './components/ViewShiftDetailsModal';
@@ -41,6 +44,9 @@ import {
   useSupabaseProviders, 
   useSupabaseClinicTypes, 
   useSupabaseMedicalAssistants, 
+  useSupabaseFrontStaff,
+  useSupabaseBilling,
+  useSupabaseBehavioralHealth,
   useSupabaseShifts 
 } from './hooks/useSupabaseData';
 import { 
@@ -138,6 +144,12 @@ const MainApplication: React.FC = () => {
     useSupabaseClinicTypes(INITIAL_CLINIC_TYPES);
   const { data: medicalAssistants, setData: setMedicalAssistants, loading: masLoading, error: masError } = 
     useSupabaseMedicalAssistants(INITIAL_MEDICAL_ASSISTANTS);
+  const { data: frontStaff, setData: setFrontStaff, loading: frontStaffLoading, error: frontStaffError } = 
+    useSupabaseFrontStaff([]);
+  const { data: billing, setData: setBilling, loading: billingLoading, error: billingError } = 
+    useSupabaseBilling([]);
+  const { data: behavioralHealth, setData: setBehavioralHealth, loading: behavioralHealthLoading, error: behavioralHealthError } = 
+    useSupabaseBehavioralHealth([]);
   const { data: shifts, setData: setShifts, deleteShift: deleteShiftFromDb, deleteShifts: deleteShiftsFromDb, loading: shiftsLoading, error: shiftsError } = 
     useSupabaseShifts(INITIAL_SHIFTS);
   
@@ -156,6 +168,9 @@ const MainApplication: React.FC = () => {
     providerIds: [],
     clinicTypeIds: [],
     medicalAssistantIds: [], 
+    frontStaffIds: [],
+    billingIds: [],
+    behavioralHealthIds: [],
     showVacations: true,
   });
 
@@ -430,6 +445,137 @@ const MainApplication: React.FC = () => {
     })));
     addToast(`Medical Assistant "${maName}" deleted and unassigned from shifts.`, 'success');
   };
+
+  // Real CRUD functions for new entities
+  const addFrontStaff = async (frontStaffData: Omit<typeof frontStaff[0], 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!canEdit) {
+      addToast('You do not have permission to add front staff', 'error');
+      return;
+    }
+
+    const newFrontStaff = {
+      ...frontStaffData,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await setFrontStaff([...frontStaff, newFrontStaff]);
+    addToast(`Front Staff "${newFrontStaff.name}" added successfully.`, 'success');
+  };
+  
+  const updateFrontStaff = async (updatedFrontStaff: typeof frontStaff[0]) => {
+    if (!canEdit) {
+      addToast('You do not have permission to update front staff', 'error');
+      return;
+    }
+
+    await setFrontStaff(frontStaff.map(fs => 
+      fs.id === updatedFrontStaff.id 
+        ? { ...updatedFrontStaff, updatedAt: new Date().toISOString() }
+        : fs
+    ));
+    addToast(`Front Staff "${updatedFrontStaff.name}" updated successfully.`, 'success');
+  };
+  
+  const deleteFrontStaff = async (frontStaffId: string) => {
+    if (!canEdit) {
+      addToast('You do not have permission to delete front staff', 'error');
+      return;
+    }
+
+    const fsName = frontStaff.find(fs => fs.id === frontStaffId)?.name || 'Unknown Front Staff';
+    await setFrontStaff(frontStaff.filter(fs => fs.id !== frontStaffId));
+    addToast(`Front Staff "${fsName}" deleted successfully.`, 'success');
+  };
+
+  const addBilling = async (billingData: Omit<typeof billing[0], 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!canEdit) {
+      addToast('You do not have permission to add billing staff', 'error');
+      return;
+    }
+
+    const newBilling = {
+      ...billingData,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await setBilling([...billing, newBilling]);
+    addToast(`Billing Staff "${newBilling.name}" added successfully.`, 'success');
+  };
+  
+  const updateBilling = async (updatedBilling: typeof billing[0]) => {
+    if (!canEdit) {
+      addToast('You do not have permission to update billing staff', 'error');
+      return;
+    }
+
+    await setBilling(billing.map(b => 
+      b.id === updatedBilling.id 
+        ? { ...updatedBilling, updatedAt: new Date().toISOString() }
+        : b
+    ));
+    addToast(`Billing Staff "${updatedBilling.name}" updated successfully.`, 'success');
+  };
+  
+  const deleteBilling = async (billingId: string) => {
+    if (!canEdit) {
+      addToast('You do not have permission to delete billing staff', 'error');
+      return;
+    }
+
+    const billingName = billing.find(b => b.id === billingId)?.name || 'Unknown Billing Staff';
+    await setBilling(billing.filter(b => b.id !== billingId));
+    addToast(`Billing Staff "${billingName}" deleted successfully.`, 'success');
+  };
+
+  const addBehavioralHealth = async (behavioralHealthData: Omit<typeof behavioralHealth[0], 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!canEdit) {
+      addToast('You do not have permission to add behavioral health staff', 'error');
+      return;
+    }
+
+    const newBehavioralHealth = {
+      ...behavioralHealthData,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await setBehavioralHealth([...behavioralHealth, newBehavioralHealth]);
+    addToast(`Behavioral Health Staff "${newBehavioralHealth.name}" added successfully.`, 'success');
+  };
+  
+  const updateBehavioralHealth = async (updatedBehavioralHealth: typeof behavioralHealth[0]) => {
+    if (!canEdit) {
+      addToast('You do not have permission to update behavioral health staff', 'error');
+      return;
+    }
+
+    await setBehavioralHealth(behavioralHealth.map(bh => 
+      bh.id === updatedBehavioralHealth.id 
+        ? { ...updatedBehavioralHealth, updatedAt: new Date().toISOString() }
+        : bh
+    ));
+    addToast(`Behavioral Health Staff "${updatedBehavioralHealth.name}" updated successfully.`, 'success');
+  };
+  
+  const deleteBehavioralHealth = async (behavioralHealthId: string) => {
+    if (!canEdit) {
+      addToast('You do not have permission to delete behavioral health staff', 'error');
+      return;
+    }
+
+    const bhName = behavioralHealth.find(bh => bh.id === behavioralHealthId)?.name || 'Unknown BH Staff';
+    await setBehavioralHealth(behavioralHealth.filter(bh => bh.id !== behavioralHealthId));
+    addToast(`Behavioral Health Staff "${bhName}" deleted successfully.`, 'success');
+  };
+
+  const getFrontStaffById = (id: string) => frontStaff.find(fs => fs.id === id);
+  const getBillingById = (id: string) => billing.find(b => b.id === id);
+  const getBehavioralHealthById = (id: string) => behavioralHealth.find(bh => bh.id === id);
 
  const addShift = async (
     shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt' | 'color' | 'title' | 'seriesId'>,
@@ -925,6 +1071,12 @@ const MainApplication: React.FC = () => {
         return modalState.props?.clinicType ? 'Edit Clinic Type' : 'Add New Clinic Type';
       case 'MEDICAL_ASSISTANT_FORM': 
         return modalState.props?.medicalAssistant ? 'Edit Medical Assistant' : 'Add New Medical Assistant';
+      case 'FRONT_STAFF_FORM':
+        return modalState.props?.frontStaff ? 'Edit Front Staff' : 'Add New Front Staff';
+      case 'BILLING_FORM':
+        return modalState.props?.billing ? 'Edit Billing Staff' : 'Add New Billing Staff';
+      case 'BEHAVIORAL_HEALTH_FORM':
+        return modalState.props?.behavioralHealth ? 'Edit Behavioral Health Staff' : 'Add New Behavioral Health Staff';
       case 'SETTINGS_FORM':
         return 'Application Settings';
       case 'SHIFT_FORM':
@@ -990,13 +1142,16 @@ const MainApplication: React.FC = () => {
       });
 
   const appContextValue: AppContextType = {
-    providers, clinics, medicalAssistants, shifts, 
+    providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth, shifts, 
     addProvider, updateProvider, deleteProvider, 
     addClinicType, updateClinicType, deleteClinicType, 
     addMedicalAssistant, updateMedicalAssistant, deleteMedicalAssistant,
+    addFrontStaff, updateFrontStaff, deleteFrontStaff,
+    addBilling, updateBilling, deleteBilling,
+    addBehavioralHealth, updateBehavioralHealth, deleteBehavioralHealth,
     addShift, updateShift, deleteShift, 
     importData, 
-    getProviderById, getClinicTypeById, getMedicalAssistantById, getShiftById
+    getProviderById, getClinicTypeById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById, getShiftById
   };
   
   const settingsContextValue: SettingsContextType = {
@@ -1030,7 +1185,21 @@ const MainApplication: React.FC = () => {
                       onSetCalendarViewMode={setCalendarViewMode}
                       centralDateDisplay={centralDateDisplay}
                       onNavigateToday={handleNavigateToday} 
-                      onExportData={handleExportData} 
+                      onExportData={handleExportData}
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      providerCount={providers.length}
+                      maCount={medicalAssistants.length}
+                      frontStaffCount={frontStaff.length}
+                      billingCount={billing.length}
+                      behavioralHealthCount={behavioralHealth.length}
+                      buildingCount={clinics.length}
+                      providers={providers}
+                      medicalAssistants={medicalAssistants}
+                      frontStaff={frontStaff}
+                      billing={billing}
+                      behavioralHealth={behavioralHealth}
+                      clinics={clinics}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">
@@ -1092,6 +1261,9 @@ const MainApplication: React.FC = () => {
                 {modalState.type === 'PROVIDER_FORM' && <ProviderForm {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'CLINIC_TYPE_FORM' && <ClinicTypeForm {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'MEDICAL_ASSISTANT_FORM' && <MedicalAssistantForm {...modalState.props} onClose={closeModal} />}
+                {modalState.type === 'FRONT_STAFF_FORM' && <FrontStaffForm {...modalState.props} onClose={closeModal} />}
+                {modalState.type === 'BILLING_FORM' && <BillingForm {...modalState.props} onClose={closeModal} />}
+                {modalState.type === 'BEHAVIORAL_HEALTH_FORM' && <BehavioralHealthForm {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'SETTINGS_FORM' && <SettingsForm {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'SHIFT_FORM' && <ShiftForm {...modalState.props} onClose={closeModal} />}
                 {modalState.type === 'IMPORT_DATA_FORM' && <ImportDataForm {...modalState.props} onClose={closeModal} />}

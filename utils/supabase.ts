@@ -48,6 +48,9 @@ export const TABLES = {
   PROVIDERS: 'providers',
   CLINIC_TYPES: 'clinic_types', 
   MEDICAL_ASSISTANTS: 'medical_assistants',
+  FRONT_STAFF: 'front_staff',
+  BILLING: 'billing',
+  BEHAVIORAL_HEALTH: 'behavioral_health',
   SHIFTS: 'shifts',
   USER_SETTINGS: 'user_settings'
 } as const;
