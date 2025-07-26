@@ -56,31 +56,31 @@ const DraggableProviderItem: React.FC<DraggableProviderItemProps> = ({ provider,
     <li 
       ref={setNodeRef} 
       style={style}
-      className={`p-1.5 rounded-md group ${provider.isActive ? (isAdmin ? 'hover:bg-gray-700 cursor-grab' : 'hover:bg-gray-700') : 'opacity-60 hover:bg-gray-700'} ${isDragging ? 'shadow-lg' : ''}`}
+      className={`p-2 md:p-1.5 rounded-md group ${provider.isActive ? (isAdmin ? 'hover:bg-gray-700 cursor-grab' : 'hover:bg-gray-700') : 'opacity-60 hover:bg-gray-700'} ${isDragging ? 'shadow-lg' : ''}`}
       {...attributes} // Spread attributes for accessibility, etc.
       // Conditionally spread listeners only if admin, to disable drag for non-admins
       {...(isAdmin ? listeners : {})} 
     >
       <div className="flex items-center justify-between">
-        <label className="flex items-center text-xs cursor-pointer w-full">
+        <label className="flex items-center text-xs cursor-pointer w-full min-h-[24px] md:min-h-[20px]">
           <input
             type="checkbox"
             aria-labelledby={`provider-name-${provider.id}`}
             checked={filters.providerIds.includes(provider.id)}
             onChange={() => onFilterChange(provider.id)}
-            className="h-3 w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-1.5 flex-shrink-0"
+            className="h-4 w-4 md:h-3 md:w-3 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800 mr-2 md:mr-1.5 flex-shrink-0 touch-manipulation"
           />
-          <span className={`w-2.5 h-2.5 rounded-full mr-1.5 flex-shrink-0 ${provider.color}`} aria-hidden="true"></span>
+          <span className={`w-3 h-3 md:w-2.5 md:h-2.5 rounded-full mr-2 md:mr-1.5 flex-shrink-0 ${provider.color}`} aria-hidden="true"></span>
           <span id={`provider-name-${provider.id}`} className="truncate" title={provider.name}>{provider.name}</span>
           {!provider.isActive && <span className="ml-1 text-[10px] text-gray-400">(Inactive)</span>}
         </label>
         {isAdmin && (
-          <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-            <button onClick={() => onEdit(provider)} className="p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Edit Provider" aria-label={`Edit provider ${provider.name}`}>
-              <EditIcon className="w-3 h-3" />
+          <div className="flex items-center space-x-1 md:space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <button onClick={() => onEdit(provider)} className="p-1.5 md:p-0.5 text-gray-400 hover:text-white rounded-md focus:outline-none focus:ring-1 focus:ring-white touch-manipulation" title="Edit Provider" aria-label={`Edit provider ${provider.name}`}>
+              <EditIcon className="w-4 h-4 md:w-3 md:h-3" />
             </button>
-            <button onClick={() => onDelete(provider)} className="p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white" title="Delete Provider" aria-label={`Delete provider ${provider.name}`}>
-              <TrashIcon className="w-3 h-3" />
+            <button onClick={() => onDelete(provider)} className="p-1.5 md:p-0.5 text-red-400 hover:text-red-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white touch-manipulation" title="Delete Provider" aria-label={`Delete provider ${provider.name}`}>
+              <TrashIcon className="w-4 h-4 md:w-3 md:h-3" />
             </button>
           </div>
         )}
@@ -250,7 +250,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
         ></div>
       )}
       <aside 
-        className={`fixed lg:static top-0 left-0 h-full bg-gray-800 text-white w-64 md:w-72 space-y-6 py-7 px-2 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out z-40 shadow-lg flex flex-col`}
+        className={`fixed lg:static top-0 left-0 h-full bg-gray-800 text-white w-64 md:w-72 space-y-6 py-7 px-2 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 transition-transform duration-300 ease-in-out z-50 shadow-lg flex flex-col`}
         aria-label="Filters and Management Sidebar"
       >
           <div className="px-4 mb-4 flex justify-between items-center">
@@ -366,7 +366,7 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               {isAdmin && (
                 <button
                   onClick={() => openModal('PROVIDER_FORM')}
-                  className="p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1"
+                  className="p-1.5 md:p-1 text-blue-400 hover:text-blue-300 rounded-md focus:outline-none focus:ring-1 focus:ring-white flex-shrink-0 ml-1 touch-manipulation"
                   title="Add Provider"
                   aria-label="Add New Provider"
                 >

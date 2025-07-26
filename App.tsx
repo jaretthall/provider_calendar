@@ -387,7 +387,7 @@ const MainApplication: React.FC = () => {
     setClinics(prev => prev.map(c => c.id === updatedClinic.id ? { ...updatedClinic, updatedAt: new Date().toISOString() } : c));
     setShifts(prevShifts => prevShifts.map(s => {
         if (s.clinicTypeId === updatedClinic.id && !s.isVacation) {
-            const provider = getProviderById(s.providerId);
+            const provider = s.providerId ? getProviderById(s.providerId) : null;
             return {
                 ...s,
                 color: provider?.color || updatedClinic.color || DEFAULT_EVENT_COLOR,
@@ -409,7 +409,7 @@ const MainApplication: React.FC = () => {
         .map(s => ({
           ...s,
           clinicTypeId: undefined,
-          title: `${getProviderById(s.providerId)?.name} @ N/A`,
+          title: `${s.providerId ? getProviderById(s.providerId)?.name : 'N/A'} @ N/A`,
           updatedAt: new Date().toISOString()
         }));
       
@@ -703,23 +703,66 @@ const MainApplication: React.FC = () => {
   };
 
   const updateShift = async (updatedShift: Shift) => {
-    const provider = getProviderById(updatedShift.providerId);
-    if (!provider) { addToast('Provider not found.', 'error'); return; }
-
-    let color = provider.color;
-    let title = provider.name;
-
-    if (updatedShift.isVacation) {
-      color = VACATION_COLOR;
-      title = `${provider.name} - Vacation`;
-    } else if (updatedShift.clinicTypeId) {
-      const clinic = getClinicTypeById(updatedShift.clinicTypeId);
-      if (clinic) {
-        color = provider.color || clinic.color || DEFAULT_EVENT_COLOR;
-        title = `${provider.name} @ ${clinic.name}`;
-      } 
-    } else { 
+    let color = DEFAULT_EVENT_COLOR;
+    let title = 'Staff';
+    
+    // Determine primary staff member and color/title (same logic as addShift)
+    const provider = updatedShift.providerId ? getProviderById(updatedShift.providerId) : null;
+    if (provider) {
+      // Provider shift
+      color = provider.color;
+      title = provider.name;
+      
+      if (updatedShift.isVacation) {
+        color = VACATION_COLOR;
+        title = `${provider.name} - Vacation`;
+      } else if (updatedShift.clinicTypeId) {
+        const clinic = getClinicTypeById(updatedShift.clinicTypeId);
+        if (clinic) {
+          color = provider.color || clinic.color || DEFAULT_EVENT_COLOR;
+          title = `${provider.name} @ ${clinic.name}`;
+        }
+      } else {
         color = provider.color || DEFAULT_EVENT_COLOR;
+      }
+    } else {
+      // Non-provider shift - check other staff types
+      if (updatedShift.frontStaffIds && updatedShift.frontStaffIds.length > 0) {
+        const frontStaffMember = getFrontStaffById(updatedShift.frontStaffIds[0]);
+        if (frontStaffMember) {
+          color = frontStaffMember.color || DEFAULT_EVENT_COLOR;
+          title = updatedShift.frontStaffIds.length > 1 ? 
+            `${frontStaffMember.name} +${updatedShift.frontStaffIds.length - 1} more` : 
+            frontStaffMember.name;
+        }
+      } else if (updatedShift.billingIds && updatedShift.billingIds.length > 0) {
+        const billingMember = getBillingById(updatedShift.billingIds[0]);
+        if (billingMember) {
+          color = billingMember.color || DEFAULT_EVENT_COLOR;
+          title = updatedShift.billingIds.length > 1 ? 
+            `${billingMember.name} +${updatedShift.billingIds.length - 1} more` : 
+            billingMember.name;
+        }
+      } else if (updatedShift.behavioralHealthIds && updatedShift.behavioralHealthIds.length > 0) {
+        const bhMember = getBehavioralHealthById(updatedShift.behavioralHealthIds[0]);
+        if (bhMember) {
+          color = bhMember.color || DEFAULT_EVENT_COLOR;
+          title = updatedShift.behavioralHealthIds.length > 1 ? 
+            `${bhMember.name} +${updatedShift.behavioralHealthIds.length - 1} more` : 
+            bhMember.name;
+        }
+      }
+      
+      // Add vacation handling for non-provider staff
+      if (updatedShift.isVacation) {
+        color = VACATION_COLOR;
+        title = `${title} - Vacation`;
+      } else if (updatedShift.clinicTypeId && title !== 'Staff') {
+        const clinic = getClinicTypeById(updatedShift.clinicTypeId);
+        if (clinic) {
+          title = `${title} @ ${clinic.name}`;
+        }
+      }
     }
     
     let finalSeriesId = updatedShift.seriesId;
@@ -1012,7 +1055,7 @@ const MainApplication: React.FC = () => {
       const shiftId = itemData.shiftId as string;
       const originalShift = getShiftById(shiftId);
       if (originalShift) {
-        const provider = getProviderById(originalShift.providerId);
+        const provider = originalShift.providerId ? getProviderById(originalShift.providerId) : null;
         const mas = (originalShift.medicalAssistantIds || [])
           .map(maId => getMedicalAssistantById(maId))
           .filter(Boolean) as MedicalAssistant[];
@@ -1269,6 +1312,8 @@ const MainApplication: React.FC = () => {
                       billing={billing}
                       behavioralHealth={behavioralHealth}
                       clinics={clinics}
+                      isSidebarOpen={isSidebarOpen}
+                      toggleSidebar={toggleSidebar}
                   />
                   <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-2 md:p-6">
                     <div className="flex items-center justify-between mb-4 sm:mb-6 px-1">

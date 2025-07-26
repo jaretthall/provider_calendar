@@ -8,6 +8,7 @@ import UploadIcon from './icons/UploadIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import CogIcon from './icons/CogIcon';
 import DepartmentFilter from './DepartmentFilter';
+import MobileMenu from './MobileMenu';
 
 interface HeaderProps {
   currentViewDate: Date; // For "New Shift" button context
@@ -31,6 +32,9 @@ interface HeaderProps {
   billing: any[];
   behavioralHealth: any[];
   clinics: any[];
+  // Sidebar props for mobile integration
+  isSidebarOpen?: boolean;
+  toggleSidebar?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -53,7 +57,9 @@ const Header: React.FC<HeaderProps> = ({
   frontStaff,
   billing,
   behavioralHealth,
-  clinics
+  clinics,
+  isSidebarOpen,
+  toggleSidebar
 }) => {
   const { user, isAuthenticated, signOut } = useAuth();
   const { canEdit } = usePermissions();
@@ -73,130 +79,200 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-white shadow-md p-3 sm:p-4 sticky top-0 z-40">
-      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-        
-        <div className="flex items-center space-x-3 self-start sm:self-center">
-          <CalendarIcon className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{APP_NAME}</h1>
+      <div className="container mx-auto">
+        {/* Mobile Layout */}
+        <div className="flex md:hidden items-center justify-between">
+          {/* Left: Logo + Today button */}
+          <div className="flex items-center space-x-3">
+            <CalendarIcon className="h-6 w-6 text-blue-600" />
+            <h1 className="text-lg font-bold text-gray-800">{APP_NAME}</h1>
+          </div>
+          
+          {/* Right: Mobile menu */}
+          <MobileMenu 
+            currentViewDate={currentViewDate}
+            onExportData={onExportData}
+            calendarViewMode={calendarViewMode}
+            onSetCalendarViewMode={onSetCalendarViewMode}
+            onNavigateToday={onNavigateToday}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={toggleSidebar}
+          />
         </div>
 
-        <div className="flex flex-col items-center space-y-2">
-           <h2 className="text-lg md:text-xl font-semibold text-gray-700 order-first sm:order-none" aria-live="polite" aria-atomic="true">
+        {/* Mobile: Date and View Modes */}
+        <div className="flex md:hidden flex-col items-center space-y-3 mt-3">
+          <h2 className="text-lg font-semibold text-gray-700" aria-live="polite" aria-atomic="true">
             {centralDateDisplay}
           </h2>
-          <div className="flex space-x-1 sm:space-x-2">
+          <div className="flex space-x-1">
             <button
-                onClick={() => onSetCalendarViewMode('month')}
-                className={viewModeButtonClasses(calendarViewMode === 'month')}
+              onClick={() => onSetCalendarViewMode('month')}
+              className={viewModeButtonClasses(calendarViewMode === 'month')}
             >
-                Month
+              Month
             </button>
             <button
-                onClick={() => onSetCalendarViewMode('week')}
-                className={viewModeButtonClasses(calendarViewMode === 'week')}
+              onClick={() => onSetCalendarViewMode('week')}
+              className={viewModeButtonClasses(calendarViewMode === 'week')}
             >
-                Week
+              Week
             </button>
             <button
-                onClick={() => onSetCalendarViewMode('day')}
-                className={viewModeButtonClasses(calendarViewMode === 'day')}
-             >
-                Day
-             </button>
+              onClick={() => onSetCalendarViewMode('day')}
+              className={viewModeButtonClasses(calendarViewMode === 'day')}
+            >
+              Day
+            </button>
+          </div>
+          
+          {/* Mobile: Filter */}
+          <div className="w-full flex justify-center">
+            <DepartmentFilter
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              providerCount={providerCount}
+              maCount={maCount}
+              frontStaffCount={frontStaffCount}
+              billingCount={billingCount}
+              behavioralHealthCount={behavioralHealthCount}
+              buildingCount={buildingCount}
+              providers={providers}
+              medicalAssistants={medicalAssistants}
+              frontStaff={frontStaff}
+              billing={billing}
+              behavioralHealth={behavioralHealth}
+              clinics={clinics}
+            />
           </div>
         </div>
-        
-        <div className="flex items-center space-x-2 sm:space-x-3 self-end sm:self-center">
-          <DepartmentFilter
-            filters={filters}
-            onFiltersChange={onFiltersChange}
-            providerCount={providerCount}
-            maCount={maCount}
-            frontStaffCount={frontStaffCount}
-            billingCount={billingCount}
-            behavioralHealthCount={behavioralHealthCount}
-            buildingCount={buildingCount}
-            providers={providers}
-            medicalAssistants={medicalAssistants}
-            frontStaff={frontStaff}
-            billing={billing}
-            behavioralHealth={behavioralHealth}
-            clinics={clinics}
-          />
-           <button
-            onClick={onNavigateToday}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-          >
-            Today
-          </button>
-          {canEdit && (
-            <button
-              onClick={() => openModal('SHIFT_FORM', { initialDate: currentViewDate.toISOString().split('T')[0] })}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
-            >
-              <CalendarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>New Shift</span>
-            </button>
-          )}
-           {canEdit && (
-            <button
-              onClick={() => openModal('IMPORT_DATA_FORM')}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
-              title="Import providers, clinics, assistants, and shifts from JSON"
-            >
-              <UploadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Import Data</span>
-              <span className="sm:hidden">Import</span>
-            </button>
-          )}
-          <button
-            onClick={() => openModal('EXPORT_OPTIONS_MODAL' as ModalType, { 
-              onExportJson: onExportData,
-              openPdfSetupModal: () => openModal('PDF_EXPORT_SETUP_MODAL' as ModalType, {
-                currentCalendarViewMode: calendarViewMode,
-                onSetCalendarViewMode: onSetCalendarViewMode
-              })
-            })}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
-            title="Export schedules to JSON or PDF"
-          >
-            <DownloadIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Export Data</span>
-            <span className="sm:hidden">Export</span>
-          </button>
-          {canEdit && (
-            <button
-                onClick={() => openModal('SETTINGS_FORM' as ModalType)}
-                className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                title="Settings"
-                aria-label="Application Settings"
-            >
-                <CogIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-          )}
 
-          {isAuthenticated ? (
-            <div className="flex items-center space-x-2">
-              <span className="text-xs sm:text-sm text-gray-600">
-                {canEdit ? 'Admin' : 'User'} ({user?.email?.split('@')[0] || 'User'})
-              </span>
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center justify-between space-y-0">
+          {/* Left: Logo */}
+          <div className="flex items-center space-x-3">
+            <CalendarIcon className="h-8 w-8 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-800">{APP_NAME}</h1>
+          </div>
+
+          {/* Center: Date and View Modes */}
+          <div className="flex flex-col items-center space-y-2">
+            <h2 className="text-xl font-semibold text-gray-700" aria-live="polite" aria-atomic="true">
+              {centralDateDisplay}
+            </h2>
+            <div className="flex space-x-2">
               <button
-                onClick={signOut}
-                className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                title="Sign out"
+                onClick={() => onSetCalendarViewMode('month')}
+                className={viewModeButtonClasses(calendarViewMode === 'month')}
               >
-                Sign Out
+                Month
+              </button>
+              <button
+                onClick={() => onSetCalendarViewMode('week')}
+                className={viewModeButtonClasses(calendarViewMode === 'week')}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => onSetCalendarViewMode('day')}
+                className={viewModeButtonClasses(calendarViewMode === 'day')}
+              >
+                Day
               </button>
             </div>
-          ) : (
+          </div>
+          
+          {/* Right: Desktop Actions */}
+          <div className="flex items-center space-x-3">
+            <DepartmentFilter
+              filters={filters}
+              onFiltersChange={onFiltersChange}
+              providerCount={providerCount}
+              maCount={maCount}
+              frontStaffCount={frontStaffCount}
+              billingCount={billingCount}
+              behavioralHealthCount={behavioralHealthCount}
+              buildingCount={buildingCount}
+              providers={providers}
+              medicalAssistants={medicalAssistants}
+              frontStaff={frontStaff}
+              billing={billing}
+              behavioralHealth={behavioralHealth}
+              clinics={clinics}
+            />
             <button
-              onClick={() => openModal('LOGIN_FORM')}
-              className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-              title="Sign in to manage schedules"
+              onClick={onNavigateToday}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
             >
-              Sign In
+              Today
             </button>
-          )}
+            {canEdit && (
+              <button
+                onClick={() => openModal('SHIFT_FORM', { initialDate: currentViewDate.toISOString().split('T')[0] })}
+                className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span>New Shift</span>
+              </button>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => openModal('IMPORT_DATA_FORM')}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+                title="Import providers, clinics, assistants, and shifts from JSON"
+              >
+                <UploadIcon className="h-4 w-4" />
+                <span>Import Data</span>
+              </button>
+            )}
+            <button
+              onClick={() => openModal('EXPORT_OPTIONS_MODAL' as ModalType, { 
+                onExportJson: onExportData,
+                openPdfSetupModal: () => openModal('PDF_EXPORT_SETUP_MODAL' as ModalType, {
+                  currentCalendarViewMode: calendarViewMode,
+                  onSetCalendarViewMode: onSetCalendarViewMode
+                })
+              })}
+              className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 flex items-center space-x-1"
+              title="Export schedules to JSON or PDF"
+            >
+              <DownloadIcon className="h-4 w-4" />
+              <span>Export Data</span>
+            </button>
+            {canEdit && (
+              <button
+                onClick={() => openModal('SETTINGS_FORM' as ModalType)}
+                className="p-2 text-gray-600 hover:text-blue-600 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                title="Settings"
+                aria-label="Application Settings"
+              >
+                <CogIcon className="h-5 w-5" />
+              </button>
+            )}
+
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {canEdit ? 'Admin' : 'User'} ({user?.email?.split('@')[0] || 'User'})
+                </span>
+                <button
+                  onClick={signOut}
+                  className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                  title="Sign out"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => openModal('LOGIN_FORM')}
+                className="px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
+                title="Sign in to manage schedules"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>

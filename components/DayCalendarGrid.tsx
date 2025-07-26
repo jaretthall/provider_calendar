@@ -171,7 +171,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
     
     const relevantShifts = allShifts.filter(shift => {
         // New inverted logic: show all by default, hide if selected in filters
-        const providerMatch = filters.providerIds.length === 0 || !filters.providerIds.includes(shift.providerId);
+        const providerMatch = filters.providerIds.length === 0 || !shift.providerId || !filters.providerIds.includes(shift.providerId);
         const maMatch = filters.medicalAssistantIds.length === 0 || !(shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
         const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || !(shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
         
@@ -186,7 +186,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
         if (shift.isVacation) {
             if (!filters.showVacations) return false;
             // For vacation shifts, still apply provider hiding if provider is selected to be hidden
-            if (filters.providerIds.length > 0 && filters.providerIds.includes(shift.providerId)) return false;
+            if (filters.providerIds.length > 0 && shift.providerId && filters.providerIds.includes(shift.providerId)) return false;
             return true;
         }
         

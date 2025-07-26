@@ -32,6 +32,7 @@ const UserManagement: React.FC = () => {
 
   const loadUsers = async () => {
     try {
+      if (!supabase) throw new Error('Supabase client not available');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -59,6 +60,7 @@ const UserManagement: React.FC = () => {
 
     try {
       // Send password reset email
+      if (!supabase) throw new Error('Supabase client not available');
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -73,6 +75,7 @@ const UserManagement: React.FC = () => {
 
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
+      if (!supabase) throw new Error('Supabase client not available');
       const { error } = await supabase
         .from('user_profiles')
         .update({ is_active: !currentStatus })

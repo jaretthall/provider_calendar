@@ -56,7 +56,7 @@ export const filterShiftsForExport = (
 
     // Provider filter
     if (options.includeProviderIds.length > 0 && 
-        !options.includeProviderIds.includes(shift.providerId)) {
+        (!shift.providerId || !options.includeProviderIds.includes(shift.providerId))) {
       return false;
     }
 
@@ -124,7 +124,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
   const sortedShifts = filteredShifts.sort((a, b) => {
     const dateCompare = a.startDate.localeCompare(b.startDate);
     if (dateCompare !== 0) return dateCompare;
-    return getProviderName(a.providerId).localeCompare(getProviderName(b.providerId));
+    return getProviderName(a.providerId || '').localeCompare(getProviderName(b.providerId || ''));
   });
 
   const title = options.title || `Schedule Report - ${options.startDate} to ${options.endDate}`;
@@ -170,7 +170,7 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
             ${new Date(shift.startDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}${shift.startDate !== shift.endDate ? ` - ${new Date(shift.endDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` : ''}
           </td>
           <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
-            ${getProviderName(shift.providerId)}
+            ${getProviderName(shift.providerId || '')}
           </td>
           <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? 'All Day' : `${shift.startTime || ''} - ${shift.endTime || ''}`}

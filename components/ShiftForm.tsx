@@ -91,7 +91,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
 
 
     if (effectiveShift) {
-      setProviderId(effectiveShift.providerId);
+      setProviderId(effectiveShift.providerId || '');
       setClinicTypeId(effectiveShift.clinicTypeId);
       setSelectedMAIds(effectiveShift.medicalAssistantIds || []);
       setSelectedFrontStaffIds(effectiveShift.frontStaffIds || []);

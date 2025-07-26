@@ -249,7 +249,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
 
     const relevantShifts = allShifts.filter(shift => {
         // New inverted logic: show all by default, hide if selected in filters
-        const providerMatch = filters.providerIds.length === 0 || !filters.providerIds.includes(shift.providerId);
+        const providerMatch = filters.providerIds.length === 0 || !shift.providerId || !filters.providerIds.includes(shift.providerId);
         const maMatch = filters.medicalAssistantIds.length === 0 || !(shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
         const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || !(shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
         
@@ -264,7 +264,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
         if (shift.isVacation) {
             if (!filters.showVacations) return false;
             // For vacation shifts, still apply provider hiding if provider is selected to be hidden
-            if (filters.providerIds.length > 0 && filters.providerIds.includes(shift.providerId)) return false;
+            if (filters.providerIds.length > 0 && shift.providerId && filters.providerIds.includes(shift.providerId)) return false;
             return true;
         }
         
@@ -348,8 +348,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
     const counts = new Map<string, number>();
     dailyShiftData.forEach((dayEntry, dateString) => {
       const uniqueProviderIds = new Set<string>();
-      dayEntry.nonVacationShifts.forEach(s => uniqueProviderIds.add(s.providerId));
-      dayEntry.vacationShifts.forEach(s => uniqueProviderIds.add(s.providerId));
+      dayEntry.nonVacationShifts.forEach(s => { if (s.providerId) uniqueProviderIds.add(s.providerId); });
+      dayEntry.vacationShifts.forEach(s => { if (s.providerId) uniqueProviderIds.add(s.providerId); });
       counts.set(dateString, uniqueProviderIds.size);
     });
     return counts;

@@ -224,7 +224,7 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
 
   const applyPreset = (preset: FilterPreset) => {
     // Clear all filters first and show vacations by default
-    const newFilters = {
+    const newFilters: FilterState = {
       ...filters,
       providerIds: [],
       medicalAssistantIds: [],
@@ -271,7 +271,7 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
       {/* Filter Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-md border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${
+        className={`flex items-center space-x-2 px-3 py-2.5 md:py-2 text-sm font-medium rounded-md border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors touch-manipulation ${
           activeFiltersCount > 0
             ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
             : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -324,7 +324,7 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
                   <span className="text-sm font-medium text-gray-700">Quick Actions:</span>
                   <button
                     onClick={clearAllFilters}
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium py-1 px-2 rounded touch-manipulation"
                     disabled={activeFiltersCount === 0}
                   >
                     Show All
