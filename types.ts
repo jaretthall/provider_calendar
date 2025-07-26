@@ -38,7 +38,7 @@ export interface RecurringRule {
 
 export interface Shift {
   id: string;
-  providerId: string;
+  providerId?: string;
   clinicTypeId?: string; 
   medicalAssistantIds?: string[]; // Added MAs to shifts
   frontStaffIds?: string[]; // Added Front Staff to shifts

@@ -1,9 +1,24 @@
 import { Shift, RecurringFrequency } from '../types';
 import { getISODateString, generateRecurringDates, addDays } from './dateUtils';
 
+// Helper function to get the primary staff member info for conflict detection
+const getPrimaryStaffForConflictDetection = (shift: Shift): { staffId: string; staffType: 'provider' | 'frontStaff' | 'billing' | 'behavioralHealth' } | null => {
+  if (shift.providerId) {
+    return { staffId: shift.providerId, staffType: 'provider' };
+  } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+    return { staffId: shift.frontStaffIds[0], staffType: 'frontStaff' };
+  } else if (shift.billingIds && shift.billingIds.length > 0) {
+    return { staffId: shift.billingIds[0], staffType: 'billing' };
+  } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+    return { staffId: shift.behavioralHealthIds[0], staffType: 'behavioralHealth' };
+  }
+  return null;
+};
+
 export interface EffectiveTimeSlot {
   shiftId: string;
-  providerId: string;
+  staffId: string; // Changed from providerId to support all staff types
+  staffType: 'provider' | 'frontStaff' | 'billing' | 'behavioralHealth';
   start: Date;
   end: Date;
 }
@@ -53,12 +68,16 @@ export const getEffectiveTimeSlotsForShift = (
     }
 
 
-    slots.push({
-      shiftId: shift.id,
-      providerId: shift.providerId,
-      start: instanceStartDateTime,
-      end: instanceEndDateTime,
-    });
+    const staffInfo = getPrimaryStaffForConflictDetection(shift);
+    if (staffInfo) {
+      slots.push({
+        shiftId: shift.id,
+        staffId: staffInfo.staffId,
+        staffType: staffInfo.staffType,
+        start: instanceStartDateTime,
+        end: instanceEndDateTime,
+      });
+    }
   });
 
   return slots;
@@ -72,21 +91,24 @@ export const detectAllShiftConflicts = (
   detectionWindowEnd: Date    // End of the period
 ): Set<string> => {
   const conflictingShiftIds = new Set<string>();
-  const providerShiftsMap = new Map<string, Shift[]>();
+  const staffShiftsMap = new Map<string, Shift[]>();
 
-  // Group shifts by provider
+  // Group shifts by staff member (any type)
   shifts.forEach(shift => {
     if (!shift.isVacation) { // Only consider non-vacation shifts for conflicts
-      const list = providerShiftsMap.get(shift.providerId) || [];
-      list.push(shift);
-      providerShiftsMap.set(shift.providerId, list);
+      const staffInfo = getPrimaryStaffForConflictDetection(shift);
+      if (staffInfo) {
+        const list = staffShiftsMap.get(staffInfo.staffId) || [];
+        list.push(shift);
+        staffShiftsMap.set(staffInfo.staffId, list);
+      }
     }
   });
 
-  // For each provider, check their shifts for overlaps
-  providerShiftsMap.forEach(providerShifts => {
+  // For each staff member, check their shifts for overlaps
+  staffShiftsMap.forEach(staffShifts => {
     const effectiveSlots: EffectiveTimeSlot[] = [];
-    providerShifts.forEach(shift => {
+    staffShifts.forEach(shift => {
       effectiveSlots.push(...getEffectiveTimeSlotsForShift(shift, detectionWindowStart, detectionWindowEnd, allShiftsForExceptionHandling));
     });
 
@@ -114,8 +136,13 @@ export const findConflictsForSingleShiftConfiguration = (
   detectionWindowStart: Date,
   detectionWindowEnd: Date
 ): string[] => { // Returns titles of conflicting shifts
-  if (targetShiftConfig.isVacation || !targetShiftConfig.providerId || !targetShiftConfig.startTime || !targetShiftConfig.endTime) {
+  if (targetShiftConfig.isVacation || !targetShiftConfig.startTime || !targetShiftConfig.endTime) {
     return [];
+  }
+
+  const targetStaffInfo = getPrimaryStaffForConflictDetection(targetShiftConfig as Shift);
+  if (!targetStaffInfo) {
+    return []; // No staff assigned, no conflicts possible
   }
 
   // Create a temporary Shift object for the target configuration
@@ -123,6 +150,10 @@ export const findConflictsForSingleShiftConfiguration = (
     id: targetShiftConfig.id || 'temp-target-shift',
     providerId: targetShiftConfig.providerId,
     clinicTypeId: targetShiftConfig.clinicTypeId,
+    medicalAssistantIds: targetShiftConfig.medicalAssistantIds,
+    frontStaffIds: targetShiftConfig.frontStaffIds,
+    billingIds: targetShiftConfig.billingIds,
+    behavioralHealthIds: targetShiftConfig.behavioralHealthIds,
     startDate: targetShiftConfig.startDate,
     endDate: targetShiftConfig.endDate,
     startTime: targetShiftConfig.startTime,
@@ -134,6 +165,7 @@ export const findConflictsForSingleShiftConfiguration = (
     originalRecurringShiftId: targetShiftConfig.originalRecurringShiftId,
     isExceptionInstance: targetShiftConfig.isExceptionInstance,
     exceptionForDate: targetShiftConfig.exceptionForDate,
+    createdByUserId: targetShiftConfig.createdByUserId,
     // Dummy values for non-essential fields for conflict check
     color: '',
     title: 'Current Configuration',
@@ -147,13 +179,16 @@ export const findConflictsForSingleShiftConfiguration = (
   const processedConflictingShiftIds = new Set<string>();
 
 
-  const otherShiftsForSameProvider = allExistingShifts.filter(s => 
-    s.providerId === targetShiftConfig.providerId && 
-    s.id !== targetShiftConfig.id && // Exclude the exact same shift if editing
-    !s.isVacation
-  );
+  const otherShiftsForSameStaff = allExistingShifts.filter(s => {
+    if (s.id === targetShiftConfig.id || s.isVacation) {
+      return false; // Exclude the exact same shift if editing, and vacations
+    }
+    
+    const otherStaffInfo = getPrimaryStaffForConflictDetection(s);
+    return otherStaffInfo && otherStaffInfo.staffId === targetStaffInfo.staffId;
+  });
 
-  otherShiftsForSameProvider.forEach(otherShift => {
+  otherShiftsForSameStaff.forEach(otherShift => {
     const otherSlots = getEffectiveTimeSlotsForShift(otherShift, detectionWindowStart, detectionWindowEnd, allExistingShifts);
     
     for (const tSlot of targetSlots) {

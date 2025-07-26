@@ -150,6 +150,11 @@ const MainApplication: React.FC = () => {
     useSupabaseBilling([]);
   const { data: behavioralHealth, setData: setBehavioralHealth, loading: behavioralHealthLoading, error: behavioralHealthError } = 
     useSupabaseBehavioralHealth([]);
+  
+  // Debug: Log behavioral health data when it changes
+  useEffect(() => {
+    console.log('🔍 Behavioral Health Array Updated:', behavioralHealth);
+  }, [behavioralHealth]);
   const { data: shifts, setData: setShifts, deleteShift: deleteShiftFromDb, deleteShifts: deleteShiftsFromDb, loading: shiftsLoading, error: shiftsError } = 
     useSupabaseShifts(INITIAL_SHIFTS);
   
@@ -575,35 +580,99 @@ const MainApplication: React.FC = () => {
 
   const getFrontStaffById = (id: string) => frontStaff.find(fs => fs.id === id);
   const getBillingById = (id: string) => billing.find(b => b.id === id);
-  const getBehavioralHealthById = (id: string) => behavioralHealth.find(bh => bh.id === id);
+  const getBehavioralHealthById = (id: string) => {
+    console.log('🔍 getBehavioralHealthById called with ID:', id);
+    const found = behavioralHealth.find(bh => bh.id === id);
+    console.log('🔍 getBehavioralHealthById result:', found);
+    return found;
+  };
 
  const addShift = async (
     shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt' | 'color' | 'title' | 'seriesId'>,
     isCreatingException: boolean = false
  ): Promise<Shift | null> => {
-    const provider = getProviderById(shiftData.providerId);
-    if (!provider) {
-      addToast('Provider not found for shift.', 'error');
-      return null;
-    }
+    // Debug: Log the shift data to see what's being passed
+    console.log('🔍 addShift called with:', {
+      providerId: shiftData.providerId,
+      frontStaffIds: shiftData.frontStaffIds,
+      billingIds: shiftData.billingIds,
+      behavioralHealthIds: shiftData.behavioralHealthIds,
+      clinicTypeId: shiftData.clinicTypeId
+    });
 
-    let color = provider.color;
-    let title = provider.name;
+    let color = DEFAULT_EVENT_COLOR;
+    let title = 'Staff';
 
-    if (shiftData.isVacation) {
-      color = VACATION_COLOR;
-      title = `${provider.name} - Vacation`;
-    } else if (shiftData.clinicTypeId) {
-      const clinic = getClinicTypeById(shiftData.clinicTypeId);
-      if (clinic) {
-        color = provider.color || clinic.color || DEFAULT_EVENT_COLOR;
-        title = `${provider.name} @ ${clinic.name}`;
-      } else {
-         addToast('Clinic type not found for shift.', 'error');
-         return null;
+    // Determine primary staff member and color/title
+    const provider = shiftData.providerId ? getProviderById(shiftData.providerId) : null;
+    if (provider) {
+      // Provider shift
+      color = provider.color;
+      title = provider.name;
+      
+      if (shiftData.isVacation) {
+        color = VACATION_COLOR;
+        title = `${provider.name} - Vacation`;
+      } else if (shiftData.clinicTypeId) {
+        const clinic = getClinicTypeById(shiftData.clinicTypeId);
+        if (clinic) {
+          color = provider.color || clinic.color || DEFAULT_EVENT_COLOR;
+          title = `${provider.name} @ ${clinic.name}`;
+        } else {
+           addToast('Building not found for shift.', 'error');
+           return null;
+        }
+      } else { 
+          color = provider.color || DEFAULT_EVENT_COLOR;
       }
-    } else { 
-        color = provider.color || DEFAULT_EVENT_COLOR;
+    } else {
+      // Non-provider shift - check other staff types
+      console.log('🔍 Non-provider shift detected, checking staff arrays...');
+      
+      if (shiftData.frontStaffIds && shiftData.frontStaffIds.length > 0) {
+        console.log('🔍 Front Staff IDs found:', shiftData.frontStaffIds);
+        const frontStaffMember = getFrontStaffById(shiftData.frontStaffIds[0]);
+        console.log('🔍 Front Staff Member found:', frontStaffMember);
+        if (frontStaffMember) {
+          color = frontStaffMember.color || DEFAULT_EVENT_COLOR;
+          title = shiftData.frontStaffIds.length > 1 ? 
+            `${frontStaffMember.name} +${shiftData.frontStaffIds.length - 1} more` : 
+            frontStaffMember.name;
+        }
+      } else if (shiftData.billingIds && shiftData.billingIds.length > 0) {
+        console.log('🔍 Billing IDs found:', shiftData.billingIds);
+        const billingMember = getBillingById(shiftData.billingIds[0]);
+        console.log('🔍 Billing Member found:', billingMember);
+        if (billingMember) {
+          color = billingMember.color || DEFAULT_EVENT_COLOR;
+          title = shiftData.billingIds.length > 1 ? 
+            `${billingMember.name} +${shiftData.billingIds.length - 1} more` : 
+            billingMember.name;
+        }
+      } else if (shiftData.behavioralHealthIds && shiftData.behavioralHealthIds.length > 0) {
+        console.log('🔍 Behavioral Health IDs found:', shiftData.behavioralHealthIds);
+        const bhMember = getBehavioralHealthById(shiftData.behavioralHealthIds[0]);
+        console.log('🔍 Behavioral Health Member found:', bhMember);
+        console.log('🔍 Available BH staff:', behavioralHealth.map(bh => ({ id: bh.id, name: bh.name })));
+      console.log('🔍 First ID being searched:', shiftData.behavioralHealthIds[0]);
+      console.log('🔍 BH array length:', behavioralHealth.length);
+        if (bhMember) {
+          color = bhMember.color || DEFAULT_EVENT_COLOR;
+          title = shiftData.behavioralHealthIds.length > 1 ? 
+            `${bhMember.name} +${shiftData.behavioralHealthIds.length - 1} more` : 
+            bhMember.name;
+        }
+      }
+      
+      console.log('🔍 Final title after staff lookup:', title);
+      
+      // Add building info for non-vacation shifts
+      if (!shiftData.isVacation && shiftData.clinicTypeId) {
+        const clinic = getClinicTypeById(shiftData.clinicTypeId);
+        if (clinic) {
+          title = `${title} @ ${clinic.name}`;
+        }
+      }
     }
     
     const newId = uuidv4();

@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { Shift, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant
+import { Shift, RecurringFrequency, MedicalAssistant, FrontStaff, Billing, BehavioralHealth } from '../types';
 import { AppContext, ModalContext } from '../App';
 import { formatTime, getISODateString, getInitials } from '../utils/dateUtils';
 import { RECURRING_FREQUENCY_OPTIONS, DAYS_OF_WEEK } from '../constants';
@@ -32,8 +32,35 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
 
   if (!appContext || !modalContext) throw new Error("Context not found");
   
-  const { getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; // Added getMedicalAssistantById
+  const { getProviderById, getClinicTypeById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById } = appContext;
   const { openModal, closeModal: closeThisModal } = modalContext;
+
+  // Helper function to get primary staff member for any shift
+  const getPrimaryStaffInfo = (shift: Shift) => {
+    if (shift.providerId) {
+      const provider = getProviderById(shift.providerId);
+      return { staff: provider, name: provider?.name || 'Provider', type: 'Provider' };
+    } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+      const frontStaff = getFrontStaffById(shift.frontStaffIds[0]);
+      const name = shift.frontStaffIds.length > 1 
+        ? `${frontStaff?.name || 'Front Staff'} +${shift.frontStaffIds.length - 1} more`
+        : frontStaff?.name || 'Front Staff';
+      return { staff: frontStaff, name, type: 'Front Staff' };
+    } else if (shift.billingIds && shift.billingIds.length > 0) {
+      const billing = getBillingById(shift.billingIds[0]);
+      const name = shift.billingIds.length > 1 
+        ? `${billing?.name || 'Billing'} +${shift.billingIds.length - 1} more`
+        : billing?.name || 'Billing';
+      return { staff: billing, name, type: 'Billing' };
+    } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+      const behavioralHealth = getBehavioralHealthById(shift.behavioralHealthIds[0]);
+      const name = shift.behavioralHealthIds.length > 1 
+        ? `${behavioralHealth?.name || 'Behavioral Health'} +${shift.behavioralHealthIds.length - 1} more`
+        : behavioralHealth?.name || 'Behavioral Health';
+      return { staff: behavioralHealth, name, type: 'Behavioral Health' };
+    }
+    return { staff: null, name: 'Unknown Staff', type: 'Unknown' };
+  };
 
 
   const formatDateRange = (start: string, end: string) => {
@@ -78,13 +105,13 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
     return (
         <div className="space-y-3">
             {multipleShifts.map((s, index) => {
-                const provider = getProviderById(s.providerId);
+                const primaryStaffInfo = getPrimaryStaffInfo(s);
                 const clinic = s.clinicTypeId ? getClinicTypeById(s.clinicTypeId) : undefined;
                 const assignedMAs = (s.medicalAssistantIds || []).map(id => getMedicalAssistantById(id)).filter(Boolean) as MedicalAssistant[];
                 
                 let title = s.isVacation 
-                    ? `${getInitials(provider?.name)} - Vacation` 
-                    : `${getInitials(provider?.name)} @ ${clinic?.name || 'N/A'}`;
+                    ? `${primaryStaffInfo.name} - Vacation` 
+                    : `${primaryStaffInfo.name} @ ${clinic?.name || 'N/A'}`;
                 
                 if (assignedMAs.length > 0 && !s.isVacation) {
                     title += ` (w/ ${assignedMAs.map(ma => getInitials(ma.name)).join(', ')})`;
@@ -135,7 +162,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
     return <p className="text-center text-gray-500">No shift details to display.</p>;
   }
 
-  const provider = getProviderById(singleShift.providerId);
+  const primaryStaffInfo = getPrimaryStaffInfo(singleShift);
   const clinic = singleShift.clinicTypeId ? getClinicTypeById(singleShift.clinicTypeId) : undefined;
   const assignedMAs = (singleShift.medicalAssistantIds || []).map(id => getMedicalAssistantById(id)).filter(Boolean) as MedicalAssistant[];
 
@@ -146,8 +173,8 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
       </h3>
 
       <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-        <strong className="text-gray-600 col-span-1">Provider:</strong>
-        <p className="text-gray-800 col-span-2">{provider?.name || 'N/A'}</p>
+        <strong className="text-gray-600 col-span-1">{primaryStaffInfo.type}:</strong>
+        <p className="text-gray-800 col-span-2">{primaryStaffInfo.name}</p>
 
         {!singleShift.isVacation && clinic && (
           <>

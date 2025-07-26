@@ -508,6 +508,9 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
           providerId: item.provider_id,
           clinicTypeId: item.clinic_type_id,
           medicalAssistantIds: item.medical_assistant_ids || [],
+          frontStaffIds: item.front_staff_ids || [],
+          billingIds: item.billing_ids || [],
+          behavioralHealthIds: item.behavioral_health_ids || [],
           title: item.title,
           startDate: item.start_date,
           endDate: item.end_date,
@@ -584,9 +587,12 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
         // Transform only changed shifts to Supabase format
         const supabaseShifts = changedShifts.map(s => ({
           id: s.id,
-          provider_id: s.providerId,
+          provider_id: s.providerId || null,
           clinic_type_id: s.clinicTypeId || null,
           medical_assistant_ids: s.medicalAssistantIds || [],
+          front_staff_ids: s.frontStaffIds || [],
+          billing_ids: s.billingIds || [],
+          behavioral_health_ids: s.behavioralHealthIds || [],
           title: s.title || null,
           start_date: s.startDate,
           end_date: s.endDate,

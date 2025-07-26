@@ -254,7 +254,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       notes,
       existingProviders: providers.map(p => ({ id: p.id })),
       existingClinics: clinics.map(c => ({ id: c.id })),
-      existingMAs: medicalAssistants.map(ma => ({ id: ma.id }))
+      existingMAs: medicalAssistants.map(ma => ({ id: ma.id })),
+      skipProviderValidation: selectedDepartment !== 'providers' // Skip provider validation for non-provider departments
     });
 
     if (!shiftValidation.isValid) {
@@ -301,7 +302,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     setIsSubmitting(true);
     try {
       const baseShiftData = {
-        providerId: selectedDepartment === 'providers' ? providerId : '',
+        providerId: selectedDepartment === 'providers' ? providerId : undefined,
         clinicTypeId: isVacation ? undefined : clinicTypeId,
         medicalAssistantIds: selectedDepartment === 'providers' ? selectedMAIds : [],
         frontStaffIds: selectedDepartment === 'frontStaff' ? selectedFrontStaffIds : [],

@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { AppContext, ModalContext } from '../App';
 import { usePermissions } from '../hooks/useAuth';
-import { Shift, Provider, ClinicType, MedicalAssistant } from '../types';
+import { Shift, Provider, ClinicType, MedicalAssistant, FrontStaff, Billing, BehavioralHealth } from '../types';
 import { getInitials, getISODateString, formatTime } from '../utils/dateUtils';
 import { RecurringFrequency } from '../types';
 import WarningIcon from './icons/WarningIcon';
@@ -25,7 +25,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
 
   if (!appContext || !modalContext) throw new Error("Context not found");
 
-  const { getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext;
+  const { getProviderById, getClinicTypeById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById } = appContext;
   const { openModal } = modalContext;
 
   const dateString = getISODateString(instanceDate);
@@ -50,14 +50,37 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
 
   if (shift.isVacation) return null; 
 
-  const provider = getProviderById(shift.providerId);
-  const shiftColor = provider?.color || shift.color || 'bg-gray-500';
+  // Determine the primary staff member for display
+  let primaryStaffMember = null;
+  let primaryStaffName = 'Unknown Staff';
+  
+  if (shift.providerId) {
+    primaryStaffMember = getProviderById(shift.providerId);
+    primaryStaffName = primaryStaffMember?.name || 'Provider';
+  } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+    primaryStaffMember = getFrontStaffById(shift.frontStaffIds[0]);
+    primaryStaffName = shift.frontStaffIds.length > 1 
+      ? `${primaryStaffMember?.name || 'Front Staff'} +${shift.frontStaffIds.length - 1} more`
+      : primaryStaffMember?.name || 'Front Staff';
+  } else if (shift.billingIds && shift.billingIds.length > 0) {
+    primaryStaffMember = getBillingById(shift.billingIds[0]);
+    primaryStaffName = shift.billingIds.length > 1 
+      ? `${primaryStaffMember?.name || 'Billing'} +${shift.billingIds.length - 1} more`
+      : primaryStaffMember?.name || 'Billing';
+  } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+    primaryStaffMember = getBehavioralHealthById(shift.behavioralHealthIds[0]);
+    primaryStaffName = shift.behavioralHealthIds.length > 1 
+      ? `${primaryStaffMember?.name || 'Behavioral Health'} +${shift.behavioralHealthIds.length - 1} more`
+      : primaryStaffMember?.name || 'Behavioral Health';
+  }
+  
+  const shiftColor = primaryStaffMember?.color || shift.color || 'bg-gray-500';
   const assignedMAs: MedicalAssistant[] = (shift.medicalAssistantIds || [])
     .map(id => getMedicalAssistantById(id))
     .filter(ma => ma !== undefined) as MedicalAssistant[];
   const clinic = shift.clinicTypeId ? getClinicTypeById(shift.clinicTypeId) : undefined;
 
-  let tooltipText = `${provider?.name || 'Shift'}`; // Use full name for tooltip regardless of view
+  let tooltipText = `${primaryStaffName}`; // Use full name for tooltip regardless of view
   if (clinic) tooltipText += ` @ ${clinic.name}`;
   if (assignedMAs.length > 0) {
     tooltipText += `\nMAs: ${assignedMAs.map(ma => ma.name).join(', ')}`;
@@ -72,7 +95,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
     tooltipText += `\nNotes: ${shift.notes}`;
   }
   
-  let ariaLabelText = `Shift for ${provider?.name || 'Unknown'}`;
+  let ariaLabelText = `Shift for ${primaryStaffName}`;
   if (clinic) ariaLabelText += ` at ${clinic.name}`;
   if (assignedMAs.length > 0) {
     ariaLabelText += ` with Medical Assistants: ${assignedMAs.map(ma => ma.name).join(', ')}`;
@@ -130,7 +153,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
           }
         }}
       >
-        <p className="font-semibold text-[0.7rem] truncate w-full">{provider?.name || 'N/A Provider'}</p>
+        <p className="font-semibold text-[0.7rem] truncate w-full">{primaryStaffName}</p>
         {clinic && <p className="truncate w-full text-white/90">@ {clinic.name}</p>}
         {shift.startTime && shift.endTime && (
             <p className="text-white/80 text-[0.6rem]">
@@ -174,7 +197,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
       }}
     >
       <div className="flex items-center justify-center w-full">
-        <span className="truncate flex-shrink min-w-0">{getInitials(provider?.name)}</span>
+        <span className="truncate flex-shrink min-w-0">{getInitials(primaryStaffName)}</span>
       </div>
       {assignedMAs.length > 0 && (
         <div className="flex items-center justify-center mt-0.5 space-x-0.5 flex-shrink-0">

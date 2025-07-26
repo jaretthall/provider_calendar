@@ -534,14 +534,17 @@ export const validateShiftEnhanced = (shift: {
   existingProviders?: { id: string }[];
   existingClinics?: { id: string }[];
   existingMAs?: { id: string }[];
+  skipProviderValidation?: boolean; // New optional parameter
 }): ValidationResult => {
   const errors: string[] = [];
   
-  // Provider validation
-  if (!shift.providerId) {
-    errors.push('Provider is required');
-  } else if (shift.existingProviders && !shift.existingProviders.find(p => p.id === shift.providerId)) {
-    errors.push('Selected provider does not exist');
+  // Provider validation - skip if requested (for other staff departments)
+  if (!shift.skipProviderValidation) {
+    if (!shift.providerId) {
+      errors.push('Provider is required');
+    } else if (shift.existingProviders && !shift.existingProviders.find(p => p.id === shift.providerId)) {
+      errors.push('Selected provider does not exist');
+    }
   }
   
   // Date validations
