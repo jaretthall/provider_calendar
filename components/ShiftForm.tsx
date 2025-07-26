@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Shift, Provider, ClinicType, RecurringRule, RecurringFrequency, MedicalAssistant } from '../types'; // Added MedicalAssistant
+import { Shift, Provider, ClinicType, RecurringRule, RecurringFrequency, MedicalAssistant, FrontStaff, Billing, BehavioralHealth } from '../types';
 import { AppContext, ToastContext, ModalContext } from '../App';
 import { useAuth, usePermissions } from '../hooks/useAuth';
 import { PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR } from '../constants';
@@ -46,13 +46,17 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   const { canEdit } = usePermissions();
 
   if (!appContext || !toastContext || !modalContext) throw new Error("Context not found");
-  const { providers, clinics, medicalAssistants, shifts: allShifts, addShift, updateShift, deleteShift, getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; // Added medicalAssistants, getMedicalAssistantById 
+  const { providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth, shifts: allShifts, addShift, updateShift, deleteShift, getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; 
   const { addToast } = toastContext; 
   const { openModal } = modalContext;
 
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [providerId, setProviderId] = useState<string>('');
   const [clinicTypeId, setClinicTypeId] = useState<string | undefined>(undefined);
-  const [selectedMAIds, setSelectedMAIds] = useState<string[]>([]); // MA selection state
+  const [selectedMAIds, setSelectedMAIds] = useState<string[]>([]);
+  const [selectedFrontStaffIds, setSelectedFrontStaffIds] = useState<string[]>([]);
+  const [selectedBillingIds, setSelectedBillingIds] = useState<string[]>([]);
+  const [selectedBehavioralHealthIds, setSelectedBehavioralHealthIds] = useState<string[]>([]);
   const [currentStartDate, setStartDate] = useState<string>(initialDate || getISODateString(new Date()));
   const [currentEndDate, setEndDate] = useState<string>(initialDate || getISODateString(new Date()));
   const [startTime, setStartTime] = useState<string>('09:00');
@@ -65,7 +69,10 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   
   const activeProviders = providers.filter(p => p.isActive);
   const activeClinics = clinics.filter(c => c.isActive);
-  const activeMAs = medicalAssistants.filter(ma => ma.isActive); // Active MAs
+  const activeMAs = medicalAssistants.filter(ma => ma.isActive);
+  const activeFrontStaff = frontStaff.filter(fs => fs.isActive);
+  const activeBilling = billing.filter(b => b.isActive);
+  const activeBehavioralHealth = behavioralHealth.filter(bh => bh.isActive);
 
   useEffect(() => {
     let effectiveShift = shift; 
@@ -86,7 +93,23 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     if (effectiveShift) {
       setProviderId(effectiveShift.providerId);
       setClinicTypeId(effectiveShift.clinicTypeId);
-      setSelectedMAIds(effectiveShift.medicalAssistantIds || []); // Initialize selected MAs
+      setSelectedMAIds(effectiveShift.medicalAssistantIds || []);
+      setSelectedFrontStaffIds(effectiveShift.frontStaffIds || []);
+      setSelectedBillingIds(effectiveShift.billingIds || []);
+      setSelectedBehavioralHealthIds(effectiveShift.behavioralHealthIds || []);
+      
+      // Determine department based on existing data
+      if (effectiveShift.providerId) {
+        setSelectedDepartment('providers');
+      } else if (effectiveShift.frontStaffIds && effectiveShift.frontStaffIds.length > 0) {
+        setSelectedDepartment('frontStaff');
+      } else if (effectiveShift.billingIds && effectiveShift.billingIds.length > 0) {
+        setSelectedDepartment('billing');
+      } else if (effectiveShift.behavioralHealthIds && effectiveShift.behavioralHealthIds.length > 0) {
+        setSelectedDepartment('behavioralHealth');
+      } else {
+        setSelectedDepartment('providers'); // Default
+      }
       if (editMode !== 'singleInstance') {
         setStartDate(effectiveShift.startDate);
         setEndDate(effectiveShift.endDate);
@@ -113,6 +136,9 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       const defaultMAIds = filterDefaults?.medicalAssistantIds || [];
       setSelectedMAIds(defaultMAIds);
       
+      // Set default department to providers for new shifts
+      setSelectedDepartment('providers');
+      
       setStartDate(initialDate || getISODateString(new Date()));
       setEndDate(initialDate || getISODateString(new Date()));
       setStartTime('09:00');
@@ -121,7 +147,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       setNotes('');
       setRecurringRule({ frequency: RecurringFrequency.NONE });
     }
-  }, [shift, initialDate, instanceDate, editMode, seriesOriginalShift, providers, clinics, medicalAssistants]);
+  }, [shift, initialDate, instanceDate, editMode, seriesOriginalShift, providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth]);
 
   useEffect(() => {
     if (isVacation || !providerId || !startTime || !endTime) {
@@ -159,7 +185,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     } else {
       setFormConflictWarning(null);
     }
-  }, [providerId, currentStartDate, currentEndDate, startTime, endTime, isVacation, currentRecurringRule, clinicTypeId, notes, shift, seriesOriginalShift, instanceDate, editMode, allShifts, selectedMAIds]);
+  }, [providerId, currentStartDate, currentEndDate, startTime, endTime, isVacation, currentRecurringRule, clinicTypeId, notes, shift, seriesOriginalShift, instanceDate, editMode, allShifts, selectedMAIds, selectedFrontStaffIds, selectedBillingIds, selectedBehavioralHealthIds, selectedDepartment]);
 
 
   const handleRecurringRuleChange = <K extends keyof RecurringRule,>(field: K, value: RecurringRule[K] | undefined) => {
@@ -182,6 +208,34 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     setSelectedMAIds(prev => 
       prev.includes(maId) ? prev.filter(id => id !== maId) : [...prev, maId]
     );
+  };
+
+  const handleFrontStaffSelectionChange = (fsId: string) => {
+    setSelectedFrontStaffIds(prev => 
+      prev.includes(fsId) ? prev.filter(id => id !== fsId) : [...prev, fsId]
+    );
+  };
+
+  const handleBillingSelectionChange = (bId: string) => {
+    setSelectedBillingIds(prev => 
+      prev.includes(bId) ? prev.filter(id => id !== bId) : [...prev, bId]
+    );
+  };
+
+  const handleBehavioralHealthSelectionChange = (bhId: string) => {
+    setSelectedBehavioralHealthIds(prev => 
+      prev.includes(bhId) ? prev.filter(id => id !== bhId) : [...prev, bhId]
+    );
+  };
+
+  const handleDepartmentChange = (department: string) => {
+    setSelectedDepartment(department);
+    // Clear previous selections when switching departments
+    setProviderId('');
+    setSelectedMAIds([]);
+    setSelectedFrontStaffIds([]);
+    setSelectedBillingIds([]);
+    setSelectedBehavioralHealthIds([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -208,14 +262,34 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       return;
     }
 
-    // Additional business logic validation
-    if (!providerId) {
+    // Additional business logic validation based on department
+    if (!selectedDepartment) {
+      addToast("Please select a department.", 'error'); 
+      return;
+    }
+
+    if (selectedDepartment === 'providers' && !providerId) {
       addToast("Please select a provider.", 'error'); 
+      return;
+    }
+
+    if (selectedDepartment === 'frontStaff' && selectedFrontStaffIds.length === 0) {
+      addToast("Please select at least one front staff member.", 'error'); 
+      return;
+    }
+
+    if (selectedDepartment === 'billing' && selectedBillingIds.length === 0) {
+      addToast("Please select at least one billing staff member.", 'error'); 
+      return;
+    }
+
+    if (selectedDepartment === 'behavioralHealth' && selectedBehavioralHealthIds.length === 0) {
+      addToast("Please select at least one behavioral health staff member.", 'error'); 
       return;
     }
     
     if (!isVacation && !clinicTypeId) {
-      addToast("Please select a clinic type for a non-vacation shift.", 'error'); 
+      addToast("Please select a building for a non-vacation shift.", 'error'); 
       return;
     }
     
@@ -227,9 +301,12 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     setIsSubmitting(true);
     try {
       const baseShiftData = {
-        providerId,
+        providerId: selectedDepartment === 'providers' ? providerId : '',
         clinicTypeId: isVacation ? undefined : clinicTypeId,
-        medicalAssistantIds: selectedMAIds,
+        medicalAssistantIds: selectedDepartment === 'providers' ? selectedMAIds : [],
+        frontStaffIds: selectedDepartment === 'frontStaff' ? selectedFrontStaffIds : [],
+        billingIds: selectedDepartment === 'billing' ? selectedBillingIds : [],
+        behavioralHealthIds: selectedDepartment === 'behavioralHealth' ? selectedBehavioralHealthIds : [],
         startDate: currentStartDate,
         endDate: currentEndDate,
         startTime: startTime || undefined,
@@ -417,13 +494,101 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
           <span>{formConflictWarning}</span>
         </div>
       )}
+      {/* Department Selection */}
       <div>
-        <label htmlFor="provider" className="block text-sm font-medium text-gray-700">Provider</label>
-        <select id="provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" required disabled={isSubmitting}>
-          <option value="" disabled>Select Provider</option>
-          {activeProviders.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+        <label htmlFor="department" className="block text-sm font-medium text-gray-700">Department</label>
+        <select 
+          id="department" 
+          value={selectedDepartment} 
+          onChange={(e) => handleDepartmentChange(e.target.value)} 
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" 
+          required 
+          disabled={isSubmitting}
+        >
+          <option value="" disabled>Select Department</option>
+          <option value="providers">Providers</option>
+          <option value="frontStaff">Front Staff</option>
+          <option value="billing">Billing</option>
+          <option value="behavioralHealth">Behavioral Health</option>
         </select>
       </div>
+
+      {/* Provider Selection - Only for Providers department */}
+      {selectedDepartment === 'providers' && (
+        <div>
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700">Provider</label>
+          <select id="provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" required disabled={isSubmitting}>
+            <option value="" disabled>Select Provider</option>
+            {activeProviders.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+          </select>
+        </div>
+      )}
+
+      {/* Front Staff Selection */}
+      {selectedDepartment === 'frontStaff' && activeFrontStaff.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Front Staff</label>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 max-h-32 overflow-y-auto border border-gray-200 p-2 rounded-md">
+            {activeFrontStaff.map(fs => (
+              <label key={fs.id} className="flex items-center space-x-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  value={fs.id}
+                  checked={selectedFrontStaffIds.includes(fs.id)}
+                  onChange={() => handleFrontStaffSelectionChange(fs.id)}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                  disabled={isSubmitting}
+                />
+                <span className="truncate" title={fs.name}>{fs.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Billing Selection */}
+      {selectedDepartment === 'billing' && activeBilling.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Billing</label>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 max-h-32 overflow-y-auto border border-gray-200 p-2 rounded-md">
+            {activeBilling.map(b => (
+              <label key={b.id} className="flex items-center space-x-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  value={b.id}
+                  checked={selectedBillingIds.includes(b.id)}
+                  onChange={() => handleBillingSelectionChange(b.id)}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                  disabled={isSubmitting}
+                />
+                <span className="truncate" title={b.name}>{b.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Behavioral Health Selection */}
+      {selectedDepartment === 'behavioralHealth' && activeBehavioralHealth.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Behavioral Health</label>
+          <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 max-h-32 overflow-y-auto border border-gray-200 p-2 rounded-md">
+            {activeBehavioralHealth.map(bh => (
+              <label key={bh.id} className="flex items-center space-x-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  value={bh.id}
+                  checked={selectedBehavioralHealthIds.includes(bh.id)}
+                  onChange={() => handleBehavioralHealthSelectionChange(bh.id)}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                  disabled={isSubmitting}
+                />
+                <span className="truncate" title={bh.name}>{bh.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center">
         <input id="isVacation" type="checkbox" checked={isVacation} onChange={(e) => setIsVacation(e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50" disabled={isSubmitting}/>
@@ -433,14 +598,15 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       {!isVacation && (
         <>
           <div>
-            <label htmlFor="clinicType" className="block text-sm font-medium text-gray-700">Clinic Type</label>
+            <label htmlFor="clinicType" className="block text-sm font-medium text-gray-700">Building</label>
             <select id="clinicType" value={clinicTypeId || ''} onChange={(e) => setClinicTypeId(e.target.value || undefined)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" required={!isVacation} disabled={isVacation || isSubmitting}>
-              <option value="" disabled>Select Clinic Type</option>
+              <option value="" disabled>Select Building</option>
               {activeClinics.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           </div>
 
-          {activeMAs.length > 0 && (
+          {/* Medical Assistants - Only show for Providers department */}
+          {selectedDepartment === 'providers' && activeMAs.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700">Medical Assistants</label>
               <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 max-h-32 overflow-y-auto border border-gray-200 p-2 rounded-md">
