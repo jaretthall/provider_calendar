@@ -114,8 +114,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
         setStartDate(effectiveShift.startDate);
         setEndDate(effectiveShift.endDate);
       }
-      setStartTime(effectiveShift.startTime || '09:00');
-      setEndTime(effectiveShift.endTime || '17:00');
+      setStartTime(effectiveShift.startTime || (effectiveShift.isVacation ? '' : '09:00'));
+      setEndTime(effectiveShift.endTime || (effectiveShift.isVacation ? '' : '17:00'));
       setIsVacation(effectiveShift.isVacation);
       setNotes(effectiveShift.notes || '');
       if (editMode !== 'singleInstance' && editMode !== 'directException') {
@@ -148,6 +148,14 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       setRecurringRule({ frequency: RecurringFrequency.NONE });
     }
   }, [shift, initialDate, instanceDate, editMode, seriesOriginalShift, providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth]);
+
+  // Clear times when vacation mode is enabled
+  useEffect(() => {
+    if (isVacation) {
+      setStartTime('');
+      setEndTime('');
+    }
+  }, [isVacation]);
 
   useEffect(() => {
     if (isVacation || !providerId || !startTime || !endTime) {
@@ -250,8 +258,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       providerId,
       startDate: currentStartDate,
       endDate: currentEndDate,
-      startTime: startTime || undefined,
-      endTime: endTime || undefined,
+      startTime: startTime.trim() || undefined,
+      endTime: endTime.trim() || undefined,
       isVacation,
       clinicTypeId,
       medicalAssistantIds: selectedMAIds,

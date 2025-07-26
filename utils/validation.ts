@@ -43,10 +43,10 @@ export const validateMaxLength = (value: string, maxLength: number, fieldName: s
 };
 
 export const validateTime = (time: string): FieldValidationResult => {
-  if (!time) return { isValid: true }; // Allow empty for optional fields
+  if (!time || !time.trim()) return { isValid: true }; // Allow empty for optional fields
   
   const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  if (!timeRegex.test(time)) {
+  if (!timeRegex.test(time.trim())) {
     return { isValid: false, error: 'Please enter a valid time in HH:MM format' };
   }
   return { isValid: true };
