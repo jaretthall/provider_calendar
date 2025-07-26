@@ -58,7 +58,7 @@ const SupabaseAuth: React.FC<SupabaseAuthProps> = ({ onSuccess }) => {
             {isSignUp ? 'Create your account' : 'Sign in to your account'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Clinica Provider Schedule
+            Clínica Médicos
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleAuth}>

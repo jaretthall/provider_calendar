@@ -2,50 +2,52 @@
 import { Provider, ClinicType, Shift, RecurringFrequency, UserRole, MedicalAssistant, UserSettings, CalendarViewMode } from './types';
 import { getTodayInEasternTime, getISODateString } from './utils/dateUtils';
 
-export const APP_NAME = "Clinica Provider Schedule";
+export const APP_NAME = "Clínica Médicos";
+
+// Clínica Médicos Brand Colors - Based on Pantone Color Palette
+export const CLINICA_BRAND_COLORS = {
+  // Primary Brand Gradient (Pantone 200C to 114C)
+  crimson: '#D91A55',      // Deep magenta-red (Pantone 200C)
+  scarlet: '#E63946',      // Bright red (Pantone 179C) 
+  vermillion: '#F77F00',   // Orange-red (Pantone 172C)
+  orange: '#FCBF49',       // Bright orange (Pantone 1495C)
+  amber: '#FFD60A',        // Golden orange (Pantone 1365C)
+  gold: '#FFE066',         // Golden yellow (Pantone 136C)
+  yellow: '#FFEE32',       // Bright yellow (Pantone 114C)
+};
 
 export const PREDEFINED_COLORS: string[] = [
-  // Reds
+  // Clínica Brand Colors (Primary Palette)
+  '#D91A55', // Crimson
+  '#E63946', // Scarlet  
+  '#F77F00', // Vermillion
+  '#FCBF49', // Orange
+  '#FFD60A', // Amber
+  '#FFE066', // Gold
+  '#FFEE32', // Yellow
+  
+  // Extended Palette (Complementary Colors)
+  '#2A9D8F', // Teal (complementary)
+  '#264653', // Dark teal
+  '#E76F51', // Coral
+  '#F4A261', // Sandy orange
+  '#E9C46A', // Warm yellow
+  
+  // Supporting Colors
   'bg-red-500', 'bg-red-600',
-  // Oranges
-  'bg-orange-500', 'bg-orange-400',
-  // Ambers
+  'bg-orange-500', 'bg-orange-400', 
   'bg-amber-500', 'bg-amber-400',
-  // Yellows
   'bg-yellow-500', 'bg-yellow-400',
-  // Limes
-  'bg-lime-500', 'bg-lime-600',
-  // Greens
-  'bg-green-500', 'bg-green-600',
-  // Emeralds
-  'bg-emerald-500', 'bg-emerald-400',
-  // Teals
-  'bg-teal-500', 'bg-teal-600',
-  // Cyans
-  'bg-cyan-500', 'bg-cyan-400',
-  // Skies
-  'bg-sky-500', 'bg-sky-600',
-  // Blues
-  'bg-blue-500', 'bg-blue-600',
-  // Indigos
-  'bg-indigo-500', 'bg-indigo-400',
-  // Violets
-  'bg-violet-500', 'bg-violet-600',
-  // Purples
-  'bg-purple-500', 'bg-purple-600',
-  // Fuchsias
-  'bg-fuchsia-500', 'bg-fuchsia-400',
-  // Pinks
   'bg-pink-500', 'bg-pink-400',
-  // Roses
   'bg-rose-500', 'bg-rose-400',
-  // Grays/Neutrals
+  
+  // Neutrals
   'bg-slate-500', 'bg-gray-500',
 ];
 
 
-export const VACATION_COLOR = 'bg-red-600'; 
-export const DEFAULT_EVENT_COLOR = 'bg-gray-600'; 
+export const VACATION_COLOR = '#D91A55'; // Using brand crimson for vacations
+export const DEFAULT_EVENT_COLOR = '#264653'; // Using dark teal for default events 
 
 export const INITIAL_PROVIDERS: Provider[] = [
   { id: 'prov1', name: 'Dr. Smith', color: PREDEFINED_COLORS[0], isActive: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },

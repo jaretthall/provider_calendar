@@ -12,30 +12,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Common healthcare/medical colors
+        // Clínica Médicos Brand Colors
+        clinica: {
+          crimson: '#D91A55',    // Deep magenta-red (Pantone 200C)
+          scarlet: '#E63946',    // Bright red (Pantone 179C)
+          vermillion: '#F77F00', // Orange-red (Pantone 172C)
+          orange: '#FCBF49',     // Bright orange (Pantone 1495C)
+          amber: '#FFD60A',      // Golden orange (Pantone 1365C)
+          gold: '#FFE066',       // Golden yellow (Pantone 136C)
+          yellow: '#FFEE32',     // Bright yellow (Pantone 114C)
+          teal: '#2A9D8F',       // Complementary teal
+          darkTeal: '#264653',   // Dark teal
+        },
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+          50: '#fef2f2',
+          100: '#fee2e2', 
+          200: '#fbcfe8',
+          300: '#f472b6',
+          400: '#ec4899',
+          500: '#D91A55', // Brand crimson
+          600: '#be185d',
+          700: '#9d174d',
+          800: '#831843',
+          900: '#701a75',
         },
         success: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#22c55e',
-          600: '#16a34a',
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          500: '#2A9D8F', // Brand teal
+          600: '#0d9488',
         },
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
-          500: '#f59e0b',
+          500: '#FCBF49', // Brand orange
           600: '#d97706',
         },
         error: {
           50: '#fef2f2',
           100: '#fee2e2',
-          500: '#ef4444',
+          500: '#D91A55', // Brand crimson
           600: '#dc2626',
         }
       },
@@ -48,6 +64,25 @@ export default {
   plugins: [],
   // Ensure all classes are generated for production
   safelist: [
+    // Clínica Brand Colors
+    'bg-clinica-crimson',
+    'bg-clinica-scarlet', 
+    'bg-clinica-vermillion',
+    'bg-clinica-orange',
+    'bg-clinica-amber',
+    'bg-clinica-gold',
+    'bg-clinica-yellow',
+    'bg-clinica-teal',
+    'bg-clinica-darkTeal',
+    'text-clinica-crimson',
+    'text-clinica-scarlet',
+    'text-clinica-vermillion',
+    'text-clinica-orange',
+    'text-clinica-amber',
+    'text-clinica-gold',
+    'text-clinica-yellow',
+    'text-clinica-teal',
+    'text-clinica-darkTeal',
     'bg-gray-100',
     'bg-gray-200',
     'bg-gray-300',
