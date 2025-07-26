@@ -180,8 +180,18 @@ export const findConflictsForSingleShiftConfiguration = (
 
 
   const otherShiftsForSameStaff = allExistingShifts.filter(s => {
-    if (s.id === targetShiftConfig.id || s.isVacation) {
-      return false; // Exclude the exact same shift if editing, and vacations
+    if (s.isVacation) {
+      return false; // Exclude vacations
+    }
+    
+    // Exclude the exact same shift if editing
+    if (s.id === targetShiftConfig.id) {
+      return false;
+    }
+    
+    // Exclude entire series if editing a series (to prevent false conflicts when changing staff types)
+    if (targetShiftConfig.seriesId && s.seriesId === targetShiftConfig.seriesId) {
+      return false;
     }
     
     const otherStaffInfo = getPrimaryStaffForConflictDetection(s);

@@ -157,9 +157,12 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
 
     const currentShiftConfig = {
       id: shift?.id, 
-      providerId,
+      providerId: selectedDepartment === 'providers' ? providerId : undefined,
       clinicTypeId,
-      medicalAssistantIds: selectedMAIds,
+      medicalAssistantIds: selectedDepartment === 'providers' ? selectedMAIds : [],
+      frontStaffIds: selectedDepartment === 'frontStaff' ? selectedFrontStaffIds : [],
+      billingIds: selectedDepartment === 'billing' ? selectedBillingIds : [],
+      behavioralHealthIds: selectedDepartment === 'behavioralHealth' ? selectedBehavioralHealthIds : [],
       startDate: currentStartDate,
       endDate: currentEndDate,
       startTime,
@@ -171,6 +174,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       originalRecurringShiftId: seriesOriginalShift?.id || shift?.originalRecurringShiftId,
       isExceptionInstance: editMode === 'singleInstance' || editMode === 'directException' || shift?.isExceptionInstance,
       exceptionForDate: instanceDate || shift?.exceptionForDate,
+      createdByUserId: currentUser?.id,
     };
     
     const formDetectionStart = new Date(currentStartDate);
