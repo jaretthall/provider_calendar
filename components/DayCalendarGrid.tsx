@@ -146,7 +146,25 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
 
   if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
-  const { getProviderById, getMedicalAssistantById } = appContext;
+  const { getProviderById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById } = appContext;
+
+  // Helper function to get staff initials for any shift type
+  const getStaffInitials = (shift: Shift): string | undefined => {
+    if (shift.providerId) {
+      const provider = getProviderById(shift.providerId);
+      return getInitials(provider?.name);
+    } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+      const frontStaff = getFrontStaffById(shift.frontStaffIds[0]);
+      return getInitials(frontStaff?.name);
+    } else if (shift.billingIds && shift.billingIds.length > 0) {
+      const billing = getBillingById(shift.billingIds[0]);
+      return getInitials(billing?.name);
+    } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+      const behavioralHealth = getBehavioralHealthById(shift.behavioralHealthIds[0]);
+      return getInitials(behavioralHealth?.name);
+    }
+    return undefined;
+  };
 
   const dayData = useMemo(() => {
     const dataForDay = { shifts: [] as Shift[], vacations: [] as Shift[], vacationInitials: [] as string[] };
@@ -181,8 +199,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
         if (getISODateString(occurrenceDate) === getISODateString(currentDate)) {
           const shiftForDisplay = { ...shift };
           if (shift.isVacation) {
-            const provider = getProviderById(shift.providerId);
-            const initials = getInitials(provider?.name);
+            const initials = getStaffInitials(shift);
             if (initials && !dataForDay.vacationInitials.includes(initials)) {
               dataForDay.vacationInitials.push(initials);
             }
@@ -199,8 +216,7 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
 
       if (shift.isExceptionInstance && shift.exceptionForDate === getISODateString(currentDate)) {
         if (shift.isVacation) {
-          const provider = getProviderById(shift.providerId);
-          const initials = getInitials(provider?.name);
+          const initials = getStaffInitials(shift);
           if (initials && !dataForDay.vacationInitials.includes(initials)) {
             dataForDay.vacationInitials.push(initials);
           }

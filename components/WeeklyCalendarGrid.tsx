@@ -118,6 +118,24 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
   if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
 
+  // Helper function to get staff initials for any shift type
+  const getStaffInitials = (shift: Shift): string | undefined => {
+    if (shift.providerId) {
+      const provider = appContext.getProviderById(shift.providerId);
+      return getInitials(provider?.name);
+    } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+      const frontStaff = appContext.getFrontStaffById(shift.frontStaffIds[0]);
+      return getInitials(frontStaff?.name);
+    } else if (shift.billingIds && shift.billingIds.length > 0) {
+      const billing = appContext.getBillingById(shift.billingIds[0]);
+      return getInitials(billing?.name);
+    } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+      const behavioralHealth = appContext.getBehavioralHealthById(shift.behavioralHealthIds[0]);
+      return getInitials(behavioralHealth?.name);
+    }
+    return undefined;
+  };
+
   const weekDays = useMemo(() => getWeekDays(currentDate, weekStartsOn), [currentDate, weekStartsOn]);
 
   const weeklyData = useMemo(() => {
@@ -159,8 +177,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
         if (dayData) {
           const shiftForDisplay = { ...shift }; 
           if (shift.isVacation) {
-            const provider = appContext.getProviderById(shift.providerId);
-            const initials = getInitials(provider?.name);
+            const initials = getStaffInitials(shift);
             if (initials && !dayData.vacationInitials.includes(initials)) {
               dayData.vacationInitials.push(initials);
             }
@@ -180,8 +197,7 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
             const dayData = dataByDay.get(dateString);
             if (dayData) {
                 if (shift.isVacation) {
-                    const provider = appContext.getProviderById(shift.providerId);
-                    const initials = getInitials(provider?.name);
+                    const initials = getStaffInitials(shift);
                     if (initials && !dayData.vacationInitials.includes(initials)) {
                         dayData.vacationInitials.push(initials);
                     }

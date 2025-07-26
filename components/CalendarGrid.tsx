@@ -165,7 +165,25 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
 
   if (!modalContext || !appContext) throw new Error("Context not found");
   const { openModal } = modalContext;
-  const { getProviderById } = appContext;
+  const { getProviderById, getFrontStaffById, getBillingById, getBehavioralHealthById } = appContext;
+
+  // Helper function to get staff initials for any shift type
+  const getStaffInitials = (shift: Shift): string | undefined => {
+    if (shift.providerId) {
+      const provider = getProviderById(shift.providerId);
+      return getInitials(provider?.name);
+    } else if (shift.frontStaffIds && shift.frontStaffIds.length > 0) {
+      const frontStaff = getFrontStaffById(shift.frontStaffIds[0]);
+      return getInitials(frontStaff?.name);
+    } else if (shift.billingIds && shift.billingIds.length > 0) {
+      const billing = getBillingById(shift.billingIds[0]);
+      return getInitials(billing?.name);
+    } else if (shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0) {
+      const behavioralHealth = getBehavioralHealthById(shift.behavioralHealthIds[0]);
+      return getInitials(behavioralHealth?.name);
+    }
+    return undefined;
+  };
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -265,8 +283,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
             const shiftForDisplay = { ...shift };
 
             if (shiftForDisplay.isVacation) {
-                const provider = getProviderById(shiftForDisplay.providerId);
-                const initials = getInitials(provider?.name);
+                const initials = getStaffInitials(shiftForDisplay);
                 if (initials && !dayData.vacationProviderInitials.includes(initials)) {
                      dayData.vacationProviderInitials.push(initials);
                 }
@@ -288,8 +305,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
                 }
                 const dayData = map.get(dateString)!;
                 if (shift.isVacation) {
-                    const provider = getProviderById(shift.providerId);
-                    const initials = getInitials(provider?.name);
+                    const initials = getStaffInitials(shift);
                     if (initials && !dayData.vacationProviderInitials.includes(initials)) {
                         dayData.vacationProviderInitials.push(initials);
                     }
@@ -326,7 +342,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
         dayData.vacationShifts = Array.from(uniqueVacationShifts.values());
     });
     return map;
-  }, [allShifts, filters, gridStartDate, gridEndDate, getProviderById]);
+  }, [allShifts, filters, gridStartDate, gridEndDate, getProviderById, getFrontStaffById, getBillingById, getBehavioralHealthById]);
 
   const personnelCountPerDay = useMemo(() => {
     const counts = new Map<string, number>();
