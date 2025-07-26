@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { Provider, Shift, ClinicType, MedicalAssistant, CalendarViewMode } from '../types';
+import { Provider, Shift, ClinicType, MedicalAssistant, FrontStaff, Billing, BehavioralHealth, CalendarViewMode } from '../types';
 import { getMonthYearString, getWeekRangeString, getISODateString } from './dateUtils';
 
 export interface PdfExportOptions {
@@ -11,6 +11,9 @@ export interface PdfExportOptions {
   includeProviderIds: string[];
   includeClinicTypeIds: string[];
   includeMedicalAssistantIds: string[];
+  includeFrontStaffIds: string[];
+  includeBillingIds: string[];
+  includeBehavioralHealthIds: string[];
   includeVacations: boolean;
   orientation: 'portrait' | 'landscape';
   paperSize: 'a4' | 'letter' | 'legal';
@@ -22,6 +25,9 @@ export interface PdfGenerationData {
   providers: Provider[];
   clinicTypes: ClinicType[];
   medicalAssistants: MedicalAssistant[];
+  frontStaff: FrontStaff[];
+  billing: Billing[];
+  behavioralHealth: BehavioralHealth[];
   options: PdfExportOptions;
 }
 
@@ -68,6 +74,27 @@ export const filterShiftsForExport = (
       return false;
     }
 
+    // Front staff filter
+    if (options.includeFrontStaffIds.length > 0 && 
+        shift.frontStaffIds && 
+        !shift.frontStaffIds.some(fsId => options.includeFrontStaffIds.includes(fsId))) {
+      return false;
+    }
+
+    // Billing filter
+    if (options.includeBillingIds.length > 0 && 
+        shift.billingIds && 
+        !shift.billingIds.some(bId => options.includeBillingIds.includes(bId))) {
+      return false;
+    }
+
+    // Behavioral health filter
+    if (options.includeBehavioralHealthIds.length > 0 && 
+        shift.behavioralHealthIds && 
+        !shift.behavioralHealthIds.some(bhId => options.includeBehavioralHealthIds.includes(bhId))) {
+      return false;
+    }
+
     // Vacation filter
     if (!options.includeVacations && shift.isVacation) {
       return false;
@@ -79,13 +106,19 @@ export const filterShiftsForExport = (
 
 // Generate list-style PDF content
 export const generateListPdfContent = (data: PdfGenerationData): string => {
-  const { shifts, providers, clinicTypes, medicalAssistants, options } = data;
+  const { shifts, providers, clinicTypes, medicalAssistants, frontStaff, billing, behavioralHealth, options } = data;
   const filteredShifts = filterShiftsForExport(shifts, options);
   
   const getProviderName = (id: string) => providers.find(p => p.id === id)?.name || 'Unknown Provider';
   const getClinicName = (id: string) => clinicTypes.find(c => c.id === id)?.name || 'N/A';
   const getMaNames = (ids?: string[]) => 
     ids?.map(id => medicalAssistants.find(ma => ma.id === id)?.name).filter(Boolean).join(', ') || 'None';
+  const getFrontStaffNames = (ids?: string[]) => 
+    ids?.map(id => frontStaff.find(fs => fs.id === id)?.name).filter(Boolean).join(', ') || 'None';
+  const getBillingNames = (ids?: string[]) => 
+    ids?.map(id => billing.find(b => b.id === id)?.name).filter(Boolean).join(', ') || 'None';
+  const getBehavioralHealthNames = (ids?: string[]) => 
+    ids?.map(id => behavioralHealth.find(bh => bh.id === id)?.name).filter(Boolean).join(', ') || 'None';
 
   // Sort shifts by date and provider
   const sortedShifts = filteredShifts.sort((a, b) => {
@@ -111,12 +144,15 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
     html += `
       <thead>
         <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Date</th>
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Provider</th>
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Time</th>
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Clinic</th>
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Medical Assistants</th>
-          <th style="padding: 8px; text-align: left; font-weight: bold; border: 1px solid #dee2e6;">Notes</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Date</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Provider</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Time</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Clinic</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">MAs</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Front Staff</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Billing</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Behavioral Health</th>
+          <th style="padding: 6px; text-align: left; font-weight: bold; border: 1px solid #dee2e6; font-size: 10px;">Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -130,22 +166,31 @@ export const generateListPdfContent = (data: PdfGenerationData): string => {
       
       html += `
         <tr style="border-bottom: 1px solid #dee2e6; page-break-inside: avoid; ${vacationStyle}">
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${new Date(shift.startDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}${shift.startDate !== shift.endDate ? ` - ${new Date(shift.endDate).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}` : ''}
           </td>
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${getProviderName(shift.providerId)}
           </td>
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? 'All Day' : `${shift.startTime || ''} - ${shift.endTime || ''}`}
           </td>
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? 'Vacation' : getClinicName(shift.clinicTypeId || '')}
           </td>
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${isVacation ? '-' : getMaNames(shift.medicalAssistantIds)}
           </td>
-          <td style="padding: 8px; border: 1px solid #dee2e6; ${vacationStyle || `background-color: ${backgroundColor};`}">
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
+            ${isVacation ? '-' : getFrontStaffNames(shift.frontStaffIds)}
+          </td>
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
+            ${isVacation ? '-' : getBillingNames(shift.billingIds)}
+          </td>
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
+            ${isVacation ? '-' : getBehavioralHealthNames(shift.behavioralHealthIds)}
+          </td>
+          <td style="padding: 6px; border: 1px solid #dee2e6; font-size: 10px; ${vacationStyle || `background-color: ${backgroundColor};`}">
             ${shift.notes || '-'}
           </td>
         </tr>

@@ -24,7 +24,7 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
     return <div>Error: Context not available</div>;
   }
 
-  const { providers = [], clinics: clinicTypes = [], medicalAssistants = [], shifts = [] } = appContext;
+  const { providers = [], clinics: clinicTypes = [], medicalAssistants = [], frontStaff = [], billing = [], behavioralHealth = [], shifts = [] } = appContext;
   const { addToast } = toastContext;
 
   // Initialize form state
@@ -40,6 +40,9 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
     includeProviderIds: providers.filter(p => p.isActive).map(p => p.id),
     includeClinicTypeIds: clinicTypes.filter(c => c.isActive).map(c => c.id),
     includeMedicalAssistantIds: medicalAssistants.filter(ma => ma.isActive).map(ma => ma.id),
+    includeFrontStaffIds: frontStaff.filter(fs => fs.isActive).map(fs => fs.id),
+    includeBillingIds: billing.filter(b => b.isActive).map(b => b.id),
+    includeBehavioralHealthIds: behavioralHealth.filter(bh => bh.isActive).map(bh => bh.id),
     includeVacations: true,
     orientation: 'portrait',
     paperSize: 'a4',
@@ -77,6 +80,33 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
     }));
   };
 
+  const handleFrontStaffToggle = (fsId: string) => {
+    setOptions(prev => ({
+      ...prev,
+      includeFrontStaffIds: prev.includeFrontStaffIds.includes(fsId)
+        ? prev.includeFrontStaffIds.filter(id => id !== fsId)
+        : [...prev.includeFrontStaffIds, fsId]
+    }));
+  };
+
+  const handleBillingToggle = (bId: string) => {
+    setOptions(prev => ({
+      ...prev,
+      includeBillingIds: prev.includeBillingIds.includes(bId)
+        ? prev.includeBillingIds.filter(id => id !== bId)
+        : [...prev.includeBillingIds, bId]
+    }));
+  };
+
+  const handleBehavioralHealthToggle = (bhId: string) => {
+    setOptions(prev => ({
+      ...prev,
+      includeBehavioralHealthIds: prev.includeBehavioralHealthIds.includes(bhId)
+        ? prev.includeBehavioralHealthIds.filter(id => id !== bhId)
+        : [...prev.includeBehavioralHealthIds, bhId]
+    }));
+  };
+
   const handleSelectAllProviders = () => {
     const activeProviderIds = providers.filter(p => p.isActive).map(p => p.id);
     setOptions(prev => ({ ...prev, includeProviderIds: activeProviderIds }));
@@ -90,6 +120,21 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
   const handleSelectAllMAs = () => {
     const activeMaIds = medicalAssistants.filter(ma => ma.isActive).map(ma => ma.id);
     setOptions(prev => ({ ...prev, includeMedicalAssistantIds: activeMaIds }));
+  };
+
+  const handleSelectAllFrontStaff = () => {
+    const activeFsIds = frontStaff.filter(fs => fs.isActive).map(fs => fs.id);
+    setOptions(prev => ({ ...prev, includeFrontStaffIds: activeFsIds }));
+  };
+
+  const handleSelectAllBilling = () => {
+    const activeBIds = billing.filter(b => b.isActive).map(b => b.id);
+    setOptions(prev => ({ ...prev, includeBillingIds: activeBIds }));
+  };
+
+  const handleSelectAllBehavioralHealth = () => {
+    const activeBhIds = behavioralHealth.filter(bh => bh.isActive).map(bh => bh.id);
+    setOptions(prev => ({ ...prev, includeBehavioralHealthIds: activeBhIds }));
   };
 
   const handleGeneratePdf = async () => {
@@ -115,6 +160,9 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
         providers,
         clinicTypes,
         medicalAssistants,
+        frontStaff,
+        billing,
+        behavioralHealth,
         options
       };
 
@@ -348,6 +396,102 @@ const PdfExportSetupModal: React.FC<PdfExportSetupModalProps> = ({
               <span className="ml-2 flex items-center">
                 <span className={`w-3 h-3 rounded-full mr-2 ${ma.color}`}></span>
                 {ma.name}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Front Staff */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Include Front Staff
+          </label>
+          <button
+            type="button"
+            onClick={handleSelectAllFrontStaff}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            Select All Active
+          </button>
+        </div>
+        <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+          {frontStaff.filter(fs => fs.isActive).map((fs) => (
+            <label key={fs.id} className="flex items-center text-sm">
+              <input
+                type="checkbox"
+                checked={options.includeFrontStaffIds.includes(fs.id)}
+                onChange={() => handleFrontStaffToggle(fs.id)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 flex items-center">
+                <span className={`w-3 h-3 rounded-full mr-2 ${fs.color}`}></span>
+                {fs.name}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Billing */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Include Billing
+          </label>
+          <button
+            type="button"
+            onClick={handleSelectAllBilling}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            Select All Active
+          </button>
+        </div>
+        <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+          {billing.filter(b => b.isActive).map((b) => (
+            <label key={b.id} className="flex items-center text-sm">
+              <input
+                type="checkbox"
+                checked={options.includeBillingIds.includes(b.id)}
+                onChange={() => handleBillingToggle(b.id)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 flex items-center">
+                <span className={`w-3 h-3 rounded-full mr-2 ${b.color}`}></span>
+                {b.name}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Behavioral Health */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Include Behavioral Health
+          </label>
+          <button
+            type="button"
+            onClick={handleSelectAllBehavioralHealth}
+            className="text-xs text-blue-600 hover:text-blue-800"
+          >
+            Select All Active
+          </button>
+        </div>
+        <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
+          {behavioralHealth.filter(bh => bh.isActive).map((bh) => (
+            <label key={bh.id} className="flex items-center text-sm">
+              <input
+                type="checkbox"
+                checked={options.includeBehavioralHealthIds.includes(bh.id)}
+                onChange={() => handleBehavioralHealthToggle(bh.id)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 flex items-center">
+                <span className={`w-3 h-3 rounded-full mr-2 ${bh.color}`}></span>
+                {bh.name}
               </span>
             </label>
           ))}
