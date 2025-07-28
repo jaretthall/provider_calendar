@@ -10,6 +10,7 @@ import TrashIcon from './icons/TrashIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
 import WarningIcon from './icons/WarningIcon';
 import { validateShiftEnhanced } from '../utils/validation';
+import { getProvidersWithShiftsOnDate, getProviderShiftOnDate, checkTimesMismatch } from '../utils/providerShiftUtils';
 
 
 interface ShiftFormProps {
@@ -67,6 +68,10 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formConflictWarning, setFormConflictWarning] = useState<string | null>(null);
   
+  // MA-specific state for provider assignment
+  const [assignedToProviderId, setAssignedToProviderId] = useState<string>('');
+  const [timesMismatchWarning, setTimesMismatchWarning] = useState<string | null>(null);
+  
   const activeProviders = providers.filter(p => p.isActive);
   const activeClinics = clinics.filter(c => c.isActive);
   const activeMAs = medicalAssistants.filter(ma => ma.isActive);
@@ -97,10 +102,13 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       setSelectedFrontStaffIds(effectiveShift.frontStaffIds || []);
       setSelectedBillingIds(effectiveShift.billingIds || []);
       setSelectedBehavioralHealthIds(effectiveShift.behavioralHealthIds || []);
+      setAssignedToProviderId(effectiveShift.assignedToProviderId || '');
       
       // Determine department based on existing data
       if (effectiveShift.providerId) {
         setSelectedDepartment('providers');
+      } else if (effectiveShift.medicalAssistantIds && effectiveShift.medicalAssistantIds.length > 0) {
+        setSelectedDepartment('medicalAssistants');
       } else if (effectiveShift.frontStaffIds && effectiveShift.frontStaffIds.length > 0) {
         setSelectedDepartment('frontStaff');
       } else if (effectiveShift.billingIds && effectiveShift.billingIds.length > 0) {
@@ -199,6 +207,27 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     }
   }, [providerId, currentStartDate, currentEndDate, startTime, endTime, isVacation, currentRecurringRule, clinicTypeId, notes, shift, seriesOriginalShift, instanceDate, editMode, allShifts, selectedMAIds, selectedFrontStaffIds, selectedBillingIds, selectedBehavioralHealthIds, selectedDepartment]);
 
+  // Check for time mismatch when MA is assigned to provider
+  useEffect(() => {
+    if (selectedDepartment !== 'medicalAssistants' || !assignedToProviderId || !startTime || !endTime) {
+      setTimesMismatchWarning(null);
+      return;
+    }
+
+    const targetDate = new Date(currentStartDate);
+    const providerShift = getProviderShiftOnDate(allShifts, assignedToProviderId, targetDate);
+    
+    if (providerShift) {
+      const mismatchWarning = checkTimesMismatch(
+        { startTime, endTime },
+        { startTime: providerShift.startTime, endTime: providerShift.endTime }
+      );
+      setTimesMismatchWarning(mismatchWarning);
+    } else {
+      setTimesMismatchWarning(null);
+    }
+  }, [selectedDepartment, assignedToProviderId, startTime, endTime, currentStartDate, allShifts]);
+
 
   const handleRecurringRuleChange = <K extends keyof RecurringRule,>(field: K, value: RecurringRule[K] | undefined) => {
     setRecurringRule(prev => {
@@ -248,6 +277,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     setSelectedFrontStaffIds([]);
     setSelectedBillingIds([]);
     setSelectedBehavioralHealthIds([]);
+    setAssignedToProviderId('');
+    setTimesMismatchWarning(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -286,6 +317,23 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       return;
     }
 
+    if (selectedDepartment === 'medicalAssistants') {
+      if (selectedMAIds.length === 0) {
+        addToast("Please select at least one medical assistant.", 'error'); 
+        return;
+      }
+      
+      // If assigned to provider, validate that provider has a shift on this date
+      if (assignedToProviderId) {
+        const targetDate = new Date(currentStartDate);
+        const providerShift = getProviderShiftOnDate(allShifts, assignedToProviderId, targetDate);
+        if (!providerShift) {
+          addToast("The selected provider does not have a shift on this date.", 'error'); 
+          return;
+        }
+      }
+    }
+
     if (selectedDepartment === 'frontStaff' && selectedFrontStaffIds.length === 0) {
       addToast("Please select at least one front staff member.", 'error'); 
       return;
@@ -316,10 +364,11 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       const baseShiftData = {
         providerId: selectedDepartment === 'providers' ? providerId : undefined,
         clinicTypeId: isVacation ? undefined : clinicTypeId,
-        medicalAssistantIds: selectedDepartment === 'providers' ? selectedMAIds : [],
+        medicalAssistantIds: selectedDepartment === 'providers' ? selectedMAIds : (selectedDepartment === 'medicalAssistants' ? selectedMAIds : []),
         frontStaffIds: selectedDepartment === 'frontStaff' ? selectedFrontStaffIds : [],
         billingIds: selectedDepartment === 'billing' ? selectedBillingIds : [],
         behavioralHealthIds: selectedDepartment === 'behavioralHealth' ? selectedBehavioralHealthIds : [],
+        assignedToProviderId: selectedDepartment === 'medicalAssistants' ? (assignedToProviderId || undefined) : undefined,
         startDate: currentStartDate,
         endDate: currentEndDate,
         startTime: startTime.trim() ? startTime.trim() : undefined,
@@ -520,6 +569,7 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
         >
           <option value="" disabled>Select Department</option>
           <option value="providers">Providers</option>
+          <option value="medicalAssistants">Medical Assistants</option>
           <option value="frontStaff">Front Staff</option>
           <option value="billing">Billing</option>
           <option value="behavioralHealth">Behavioral Health</option>
@@ -534,6 +584,61 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
             <option value="" disabled>Select Provider</option>
             {activeProviders.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
           </select>
+        </div>
+      )}
+
+      {/* Medical Assistants Selection - Only for Medical Assistants department */}
+      {selectedDepartment === 'medicalAssistants' && (
+        <div className="space-y-4">
+          {/* MA Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Medical Assistants</label>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 max-h-32 overflow-y-auto border border-gray-200 p-2 rounded-md">
+              {activeMAs.map(ma => (
+                <label key={ma.id} className="flex items-center space-x-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    value={ma.id}
+                    checked={selectedMAIds.includes(ma.id)}
+                    onChange={() => handleMASelectionChange(ma.id)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                    disabled={isSubmitting}
+                  />
+                  <span className="truncate" title={ma.name}>{ma.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Optional Provider Assignment */}
+          <div>
+            <label htmlFor="assignedProvider" className="block text-sm font-medium text-gray-700">
+              Assign to Provider (Optional)
+            </label>
+            <select 
+              id="assignedProvider" 
+              value={assignedToProviderId} 
+              onChange={(e) => setAssignedToProviderId(e.target.value)}
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-gray-50 border-2 border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:bg-white sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500" 
+              disabled={isSubmitting}
+            >
+              <option value="">No provider assignment (floater)</option>
+              {getProvidersWithShiftsOnDate(allShifts, activeProviders, new Date(currentStartDate)).map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Only providers with shifts on {new Date(currentStartDate).toLocaleDateString()} are shown.
+            </p>
+          </div>
+
+          {/* Time Mismatch Warning */}
+          {timesMismatchWarning && (
+            <div className="p-3 text-sm text-amber-700 bg-amber-100 border border-amber-300 rounded-md flex items-center space-x-2" role="alert">
+              <WarningIcon className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span>{timesMismatchWarning}</span>
+            </div>
+          )}
         </div>
       )}
 

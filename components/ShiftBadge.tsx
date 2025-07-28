@@ -8,6 +8,7 @@ import { getInitials, getISODateString, formatTime } from '../utils/dateUtils';
 import { RecurringFrequency } from '../types';
 import WarningIcon from './icons/WarningIcon';
 import UsersIcon from './icons/UsersIcon';
+import { getMAsAssignedToProviderOnDate } from '../utils/providerShiftUtils';
 
 interface ShiftBadgeProps {
   shift: Shift;
@@ -25,7 +26,7 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
 
   if (!appContext || !modalContext) throw new Error("Context not found");
 
-  const { getProviderById, getClinicTypeById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById } = appContext;
+  const { getProviderById, getClinicTypeById, getMedicalAssistantById, getFrontStaffById, getBillingById, getBehavioralHealthById, shifts: allShifts } = appContext;
   const { openModal } = modalContext;
 
   const dateString = getISODateString(instanceDate);
@@ -72,12 +73,26 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
     primaryStaffName = shift.behavioralHealthIds.length > 1 
       ? `${primaryStaffMember?.name || 'Behavioral Health'} +${shift.behavioralHealthIds.length - 1} more`
       : primaryStaffMember?.name || 'Behavioral Health';
+  } else if (shift.medicalAssistantIds && shift.medicalAssistantIds.length > 0) {
+    // This handles standalone MA shifts (not assigned to providers)
+    primaryStaffMember = getMedicalAssistantById(shift.medicalAssistantIds[0]);
+    primaryStaffName = shift.medicalAssistantIds.length > 1 
+      ? `${primaryStaffMember?.name || 'Medical Assistant'} +${shift.medicalAssistantIds.length - 1} more`
+      : primaryStaffMember?.name || 'Medical Assistant';
   }
   
   const shiftColor = primaryStaffMember?.color || shift.color || 'bg-gray-500';
-  const assignedMAs: MedicalAssistant[] = (shift.medicalAssistantIds || [])
-    .map(id => getMedicalAssistantById(id))
-    .filter(ma => ma !== undefined) as MedicalAssistant[];
+  
+  // For provider shifts, get MAs assigned to work with this provider
+  // For other shift types, no MA badges are shown (they have their own shifts)
+  let assignedMAs: MedicalAssistant[] = [];
+  if (shift.providerId) {
+    const assignedMAShifts = getMAsAssignedToProviderOnDate(allShifts, shift.providerId, instanceDate);
+    assignedMAs = assignedMAShifts
+      .flatMap(maShift => maShift.medicalAssistantIds || [])
+      .map(id => getMedicalAssistantById(id))
+      .filter(ma => ma !== undefined) as MedicalAssistant[];
+  }
   const clinic = shift.clinicTypeId ? getClinicTypeById(shift.clinicTypeId) : undefined;
 
   let tooltipText = `${primaryStaffName}`; // Use full name for tooltip regardless of view

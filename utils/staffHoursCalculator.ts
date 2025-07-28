@@ -107,6 +107,25 @@ export function calculateStaffHours(
         }
       }
       
+      // Process standalone MA shifts (not assigned to providers in the old way)
+      if (shift.medicalAssistantIds && !shift.providerId) {
+        shift.medicalAssistantIds.forEach(maId => {
+          if (reports.has(maId)) {
+            const report = reports.get(maId)!;
+            report.shifts.push({
+              date: dateString,
+              startTime: shift.startTime || '',
+              endTime: shift.endTime || '',
+              hours,
+              isVacation: shift.isVacation
+            });
+            if (!shift.isVacation) {
+              report.totalHours += hours;
+            }
+          }
+        });
+      }
+      
       // Process front staff shifts
       shift.frontStaffIds?.forEach(fsId => {
         if (reports.has(fsId)) {

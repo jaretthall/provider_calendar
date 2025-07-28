@@ -40,10 +40,11 @@ export interface Shift {
   id: string;
   providerId?: string;
   clinicTypeId?: string; 
-  medicalAssistantIds?: string[]; // Added MAs to shifts
+  medicalAssistantIds?: string[]; // Added MAs to shifts - kept for backward compatibility
   frontStaffIds?: string[]; // Added Front Staff to shifts
   billingIds?: string[]; // Added Billing to shifts
   behavioralHealthIds?: string[]; // Added Behavioral Health to shifts
+  assignedToProviderId?: string; // For MA shifts assigned to work with a specific provider
   title?: string; 
   startDate: string; 
   endDate: string; 
