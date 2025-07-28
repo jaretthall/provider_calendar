@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { SettingsContext, ToastContext } from '../App';
+import { SettingsContext, ToastContext, AppContext } from '../App';
 import { UserSettings, CalendarViewMode } from '../types';
 import SpinnerIcon from './icons/SpinnerIcon';
+import { calculateStaffHours, exportStaffHoursToCSV, exportStaffHoursSummaryToCSV, StaffHoursReportOptions } from '../utils/staffHoursCalculator';
+import { getISODateString } from '../utils/dateUtils';
+import DownloadIcon from './icons/DownloadIcon';
 
 interface SettingsFormProps {
   onClose: () => void;
@@ -10,15 +13,29 @@ interface SettingsFormProps {
 const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
   const settingsContext = useContext(SettingsContext);
   const toastContext = useContext(ToastContext);
+  const appContext = useContext(AppContext);
 
   if (!settingsContext) throw new Error("SettingsContext not found");
   if (!toastContext) throw new Error("ToastContext not found");
+  if (!appContext) throw new Error("AppContext not found");
 
   const { settings, updateSettings } = settingsContext;
   const { addToast } = toastContext;
+  const { shifts, providers, frontStaff, billing, behavioralHealth } = appContext;
 
   const [currentSettings, setCurrentSettings] = useState<UserSettings>(settings);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Staff hours export state
+  const today = new Date();
+  const oneWeekAgo = new Date(today);
+  oneWeekAgo.setDate(today.getDate() - 7);
+  
+  const [hoursStartDate, setHoursStartDate] = useState(getISODateString(oneWeekAgo));
+  const [hoursEndDate, setHoursEndDate] = useState(getISODateString(today));
+  const [hoursStaffType, setHoursStaffType] = useState<StaffHoursReportOptions['staffType']>('all');
+  const [includeVacations, setIncludeVacations] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'detailed' | 'summary'>('summary');
 
   useEffect(() => {
     setCurrentSettings(settings);
@@ -52,6 +69,42 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
       addToast(`Error saving settings: ${error instanceof Error ? error.message : "Unknown error"}`, 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleExportHours = () => {
+    try {
+      const options: StaffHoursReportOptions = {
+        startDate: new Date(hoursStartDate),
+        endDate: new Date(hoursEndDate),
+        staffType: hoursStaffType,
+        includeVacations
+      };
+      
+      const reports = calculateStaffHours(
+        shifts,
+        providers,
+        frontStaff,
+        billing,
+        behavioralHealth,
+        options
+      );
+      
+      if (reports.length === 0) {
+        addToast('No staff hours found for the selected criteria', 'warning');
+        return;
+      }
+      
+      if (exportFormat === 'detailed') {
+        exportStaffHoursToCSV(reports, options.startDate, options.endDate);
+      } else {
+        exportStaffHoursSummaryToCSV(reports, options.startDate, options.endDate);
+      }
+      
+      addToast('Staff hours report exported successfully', 'success');
+    } catch (error) {
+      console.error('Error exporting staff hours:', error);
+      addToast('Error exporting staff hours report', 'error');
     }
   };
 
@@ -114,6 +167,105 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
         <p className="mt-1 text-xs text-gray-500">Set a default start time when creating new shifts (not yet implemented).</p>
       </div>
        */}
+
+      {/* Staff Hours Export Section */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Export Staff Hours</h3>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="hoursStartDate" className="block text-sm font-medium text-gray-700">
+                Start Date
+              </label>
+              <input
+                type="date"
+                id="hoursStartDate"
+                value={hoursStartDate}
+                onChange={(e) => setHoursStartDate(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="hoursEndDate" className="block text-sm font-medium text-gray-700">
+                End Date
+              </label>
+              <input
+                type="date"
+                id="hoursEndDate"
+                value={hoursEndDate}
+                min={hoursStartDate}
+                onChange={(e) => setHoursEndDate(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="hoursStaffType" className="block text-sm font-medium text-gray-700">
+                Staff Type
+              </label>
+              <select
+                id="hoursStaffType"
+                value={hoursStaffType}
+                onChange={(e) => setHoursStaffType(e.target.value as StaffHoursReportOptions['staffType'])}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="all">All Staff</option>
+                <option value="providers">Providers Only</option>
+                <option value="frontStaff">Front Staff Only</option>
+                <option value="billing">Billing Staff Only</option>
+                <option value="behavioralHealth">Behavioral Health Only</option>
+              </select>
+            </div>
+            
+            <div>
+              <label htmlFor="exportFormat" className="block text-sm font-medium text-gray-700">
+                Export Format
+              </label>
+              <select
+                id="exportFormat"
+                value={exportFormat}
+                onChange={(e) => setExportFormat(e.target.value as 'detailed' | 'summary')}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="summary">Summary (Total Hours Only)</option>
+                <option value="detailed">Detailed (All Shifts)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="includeVacations"
+              checked={includeVacations}
+              onChange={(e) => setIncludeVacations(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="includeVacations" className="ml-2 text-sm text-gray-700">
+              Include vacation/time-off entries
+            </label>
+          </div>
+          
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleExportHours}
+              className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <DownloadIcon className="mr-2 h-4 w-4" />
+              Export Hours Report
+            </button>
+          </div>
+        </div>
+        
+        <p className="mt-2 text-xs text-gray-500">
+          Export a CSV file with staff hours for the selected date range. Summary shows total hours per staff member, while Detailed includes individual shifts.
+        </p>
+      </div>
 
       <div className="flex justify-end space-x-3 pt-4">
         <button
