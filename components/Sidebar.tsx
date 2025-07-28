@@ -15,6 +15,7 @@ import BriefcaseIcon from './icons/BriefcaseIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import EyeIcon from './icons/EyeIcon';
 import EyeSlashIcon from './icons/EyeSlashIcon';
+import SelectAllIcon from './icons/SelectAllIcon';
 
 
 interface SidebarProps {
@@ -167,6 +168,103 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
     onFiltersChange({ ...filters, showVacations: show });
   };
 
+  // Select All functions
+  const handleSelectAllProviders = () => {
+    const activeProviderIds = providers.filter(p => p.isActive).map(p => p.id);
+    const allSelected = activeProviderIds.every(id => filters.providerIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.providerIds = filters.providerIds.filter(id => !activeProviderIds.includes(id));
+    } else {
+      // Select all active providers that aren't already selected
+      const newSelections = activeProviderIds.filter(id => !filters.providerIds.includes(id));
+      newFilters.providerIds = [...filters.providerIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
+  const handleSelectAllClinics = () => {
+    const activeClinicIds = clinics.filter(c => c.isActive).map(c => c.id);
+    const allSelected = activeClinicIds.every(id => filters.clinicTypeIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.clinicTypeIds = filters.clinicTypeIds.filter(id => !activeClinicIds.includes(id));
+    } else {
+      // Select all active clinics that aren't already selected
+      const newSelections = activeClinicIds.filter(id => !filters.clinicTypeIds.includes(id));
+      newFilters.clinicTypeIds = [...filters.clinicTypeIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
+  const handleSelectAllMAs = () => {
+    const activeMaIds = medicalAssistants.filter(ma => ma.isActive).map(ma => ma.id);
+    const allSelected = activeMaIds.every(id => filters.medicalAssistantIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.medicalAssistantIds = filters.medicalAssistantIds.filter(id => !activeMaIds.includes(id));
+    } else {
+      // Select all active MAs that aren't already selected
+      const newSelections = activeMaIds.filter(id => !filters.medicalAssistantIds.includes(id));
+      newFilters.medicalAssistantIds = [...filters.medicalAssistantIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
+  const handleSelectAllFrontStaff = () => {
+    const activeFrontStaffIds = frontStaff.filter(fs => fs.isActive).map(fs => fs.id);
+    const allSelected = activeFrontStaffIds.every(id => filters.frontStaffIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.frontStaffIds = filters.frontStaffIds.filter(id => !activeFrontStaffIds.includes(id));
+    } else {
+      // Select all active front staff that aren't already selected
+      const newSelections = activeFrontStaffIds.filter(id => !filters.frontStaffIds.includes(id));
+      newFilters.frontStaffIds = [...filters.frontStaffIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
+  const handleSelectAllBilling = () => {
+    const activeBillingIds = billing.filter(b => b.isActive).map(b => b.id);
+    const allSelected = activeBillingIds.every(id => filters.billingIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.billingIds = filters.billingIds.filter(id => !activeBillingIds.includes(id));
+    } else {
+      // Select all active billing staff that aren't already selected
+      const newSelections = activeBillingIds.filter(id => !filters.billingIds.includes(id));
+      newFilters.billingIds = [...filters.billingIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
+  const handleSelectAllBehavioralHealth = () => {
+    const activeBehavioralHealthIds = behavioralHealth.filter(bh => bh.isActive).map(bh => bh.id);
+    const allSelected = activeBehavioralHealthIds.every(id => filters.behavioralHealthIds.includes(id));
+    
+    const newFilters = { ...filters };
+    if (allSelected) {
+      // Deselect all
+      newFilters.behavioralHealthIds = filters.behavioralHealthIds.filter(id => !activeBehavioralHealthIds.includes(id));
+    } else {
+      // Select all active behavioral health staff that aren't already selected
+      const newSelections = activeBehavioralHealthIds.filter(id => !filters.behavioralHealthIds.includes(id));
+      newFilters.behavioralHealthIds = [...filters.behavioralHealthIds, ...newSelections];
+    }
+    onFiltersChange(newFilters);
+  };
+
   const handleDeleteProviderFlow = (provider: Provider) => {
     openModal('CONFIRMATION_MODAL', {
         title: 'Delete Provider',
@@ -317,8 +415,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {clinicsOpen && (
-              <ul id={clinicsSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {clinics.map(clinic => (
+              <div>
+                {clinics.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllClinics}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Buildings"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={clinicsSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {clinics.map(clinic => (
                   <li key={clinic.id} className={`p-1.5 rounded-md group ${clinic.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
@@ -346,8 +457,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                 {clinics.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No buildings yet.</li>}
-              </ul>
+                   {clinics.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No buildings yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -375,8 +487,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {providersOpen && (
-              <ul id={providersSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {providers.map(provider => (
+              <div>
+                {providers.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllProviders}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Providers"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={providersSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {providers.map(provider => (
                    <DraggableProviderItem
                       key={provider.id}
                       provider={provider}
@@ -387,8 +512,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                       isAdmin={isAdmin}
                     />
                 ))}
-                {providers.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No providers yet.</li>}
-              </ul>
+                  {providers.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No providers yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -416,8 +542,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {medicalAssistantsOpen && (
-              <ul id={medicalAssistantsSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {medicalAssistants.map(ma => (
+              <div>
+                {medicalAssistants.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllMAs}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Medical Assistants"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={medicalAssistantsSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {medicalAssistants.map(ma => (
                   <li key={ma.id} className={`p-1.5 rounded-md group ${ma.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
@@ -445,8 +584,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                {medicalAssistants.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No MAs yet.</li>}
-              </ul>
+                  {medicalAssistants.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No MAs yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -474,8 +614,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {frontStaffOpen && (
-              <ul id={frontStaffSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {frontStaff.map(fs => (
+              <div>
+                {frontStaff.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllFrontStaff}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Front Staff"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={frontStaffSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {frontStaff.map(fs => (
                   <li key={fs.id} className={`p-1.5 rounded-md group ${fs.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
@@ -503,8 +656,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                {frontStaff.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No front staff yet.</li>}
-              </ul>
+                  {frontStaff.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No front staff yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -532,8 +686,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {billingOpen && (
-              <ul id={billingSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {billing.map(b => (
+              <div>
+                {billing.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllBilling}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Billing Staff"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={billingSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {billing.map(b => (
                   <li key={b.id} className={`p-1.5 rounded-md group ${b.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
@@ -561,8 +728,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                {billing.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No billing staff yet.</li>}
-              </ul>
+                  {billing.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No billing staff yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
@@ -590,8 +758,21 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
               )}
             </div>
             {behavioralHealthOpen && (
-              <ul id={behavioralHealthSectionId} className="space-y-0.5 mt-1 max-h-80 overflow-y-auto pr-1">
-                {behavioralHealth.map(bh => (
+              <div>
+                {behavioralHealth.length > 1 && (
+                  <div className="mb-2 px-1">
+                    <button
+                      onClick={handleSelectAllBehavioralHealth}
+                      className="flex items-center text-xs text-blue-400 hover:text-blue-300 py-1 px-2 rounded-md hover:bg-gray-700 transition-colors"
+                      title="Select/Deselect All Active Behavioral Health Staff"
+                    >
+                      <SelectAllIcon className="w-3 h-3 mr-1.5" />
+                      <span>Select All</span>
+                    </button>
+                  </div>
+                )}
+                <ul id={behavioralHealthSectionId} className="space-y-0.5 max-h-80 overflow-y-auto pr-1">
+                  {behavioralHealth.map(bh => (
                   <li key={bh.id} className={`p-1.5 rounded-md group ${bh.isActive ? 'hover:bg-gray-700' : 'opacity-60 hover:bg-gray-700'}`}>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center text-xs cursor-pointer w-full">
@@ -619,8 +800,9 @@ const Sidebar: React.FC<SidebarProps> = ({ filters, onFiltersChange, isSidebarOp
                     </div>
                   </li>
                 ))}
-                {behavioralHealth.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No behavioral health staff yet.</li>}
-              </ul>
+                  {behavioralHealth.length === 0 && <li className="text-xs text-gray-400 italic pl-1">No behavioral health staff yet.</li>}
+                </ul>
+              </div>
             )}
           </div>
 
