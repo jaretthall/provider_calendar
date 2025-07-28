@@ -153,15 +153,15 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
                            filters.behavioralHealthIds.length + 
                            filters.clinicTypeIds.length;
 
-  const clearAllFilters = () => {
+  const showAllItems = () => {
     onFiltersChange({
       ...filters,
-      providerIds: [],
-      medicalAssistantIds: [],
-      frontStaffIds: [],
-      billingIds: [],
-      behavioralHealthIds: [],
-      clinicTypeIds: [],
+      providerIds: providers.map(p => p.id),
+      medicalAssistantIds: medicalAssistants.map(ma => ma.id),
+      frontStaffIds: frontStaff.map(fs => fs.id),
+      billingIds: billing.map(b => b.id),
+      behavioralHealthIds: behavioralHealth.map(bh => bh.id),
+      clinicTypeIds: clinics.map(c => c.id),
       showVacations: true  // Show vacations when showing all
     });
   };
@@ -223,38 +223,38 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
   };
 
   const applyPreset = (preset: FilterPreset) => {
-    // Clear all filters first and show vacations by default
+    // Start with all departments selected (visible)
     const newFilters: FilterState = {
       ...filters,
-      providerIds: [],
-      medicalAssistantIds: [],
-      frontStaffIds: [],
-      billingIds: [],
-      behavioralHealthIds: [],
-      clinicTypeIds: [],
+      providerIds: providers.map(p => p.id),
+      medicalAssistantIds: medicalAssistants.map(ma => ma.id),
+      frontStaffIds: frontStaff.map(fs => fs.id),
+      billingIds: billing.map(b => b.id),
+      behavioralHealthIds: behavioralHealth.map(bh => bh.id),
+      clinicTypeIds: clinics.map(c => c.id),
       showVacations: true
     };
 
-    // Hide departments specified in the preset
+    // Remove departments specified in the preset (hide them)
     preset.departments.forEach(dept => {
       switch (dept) {
         case 'providers':
-          newFilters.providerIds = providers.map(p => p.id);
+          newFilters.providerIds = [];
           break;
         case 'medicalAssistants':
-          newFilters.medicalAssistantIds = medicalAssistants.map(ma => ma.id);
+          newFilters.medicalAssistantIds = [];
           break;
         case 'frontStaff':
-          newFilters.frontStaffIds = frontStaff.map(fs => fs.id);
+          newFilters.frontStaffIds = [];
           break;
         case 'billing':
-          newFilters.billingIds = billing.map(b => b.id);
+          newFilters.billingIds = [];
           break;
         case 'behavioralHealth':
-          newFilters.behavioralHealthIds = behavioralHealth.map(bh => bh.id);
+          newFilters.behavioralHealthIds = [];
           break;
         case 'buildings':
-          newFilters.clinicTypeIds = clinics.map(c => c.id);
+          newFilters.clinicTypeIds = [];
           break;
         case 'vacations':
           newFilters.showVacations = false;  // Hide vacations if specified
@@ -323,9 +323,8 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
                 <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
                   <span className="text-sm font-medium text-gray-700">Quick Actions:</span>
                   <button
-                    onClick={clearAllFilters}
+                    onClick={showAllItems}
                     className="text-xs text-blue-600 hover:text-blue-800 font-medium py-1 px-2 rounded touch-manipulation"
-                    disabled={activeFiltersCount === 0}
                   >
                     Show All
                   </button>
@@ -349,7 +348,7 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
                           <div className="text-xs text-gray-500">
                             {dept.key === 'vacations' 
                               ? (dept.hasItems ? 'Visible' : 'Hidden')
-                              : `${dept.hasItems ? 'Hidden' : 'Visible'} • ${dept.count} total`
+                              : `${dept.hasItems ? 'Visible' : 'Hidden'} • ${dept.count} total`
                             }
                           </div>
                         </div>
@@ -376,22 +375,22 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
                             )}
                           </>
                         ) : (
-                          // Normal handling for staff departments with inverted logic
+                          // Normal handling for staff departments
                           <>
                             {!dept.hasItems && (
                               <button
                                 onClick={() => selectAllInDepartment(dept.key)}
-                                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded"
+                                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded"
                               >
-                                Hide
+                                Show
                               </button>
                             )}
                             {dept.hasItems && (
                               <button
                                 onClick={() => clearDepartment(dept.key)}
-                                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded"
+                                className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded"
                               >
-                                Show
+                                Hide
                               </button>
                             )}
                           </>
@@ -429,8 +428,8 @@ const DepartmentFilter: React.FC<DepartmentFilterProps> = ({
           <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 rounded-b-lg">
             <div className="text-xs text-gray-500 text-center">
               {activeFiltersCount === 0 
-                ? 'All departments visible' 
-                : `${activeFiltersCount} departments hidden • ${totalActiveItems} items filtered out`
+                ? 'No filters applied' 
+                : `${activeFiltersCount} departments visible • ${totalActiveItems} items shown`
               }
             </div>
           </div>
