@@ -154,12 +154,12 @@ const WeeklyCalendarGrid: React.FC<WeeklyCalendarGridProps> = ({ currentDate, al
         const isPrimaryBillingShift = shift.billingIds && shift.billingIds.length > 0 && !shift.providerId && !shift.medicalAssistantIds && !shift.frontStaffIds;
         const isPrimaryBehavioralHealthShift = shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0 && !shift.providerId && !shift.medicalAssistantIds && !shift.frontStaffIds && !shift.billingIds;
         
-        // Match based on primary shift type only
-        const providerMatch = filters.providerIds.length === 0 || (isPrimaryProviderShift && filters.providerIds.includes(shift.providerId!));
-        const maMatch = filters.medicalAssistantIds.length === 0 || (isPrimaryMAShift && shift.medicalAssistantIds!.some(maId => filters.medicalAssistantIds.includes(maId)));
-        const frontStaffMatch = filters.frontStaffIds.length === 0 || (isPrimaryFrontStaffShift && shift.frontStaffIds!.some(fsId => filters.frontStaffIds.includes(fsId)));
-        const billingMatch = filters.billingIds.length === 0 || (isPrimaryBillingShift && shift.billingIds!.some(bId => filters.billingIds.includes(bId)));
-        const behavioralHealthMatch = filters.behavioralHealthIds.length === 0 || (isPrimaryBehavioralHealthShift && shift.behavioralHealthIds!.some(bhId => filters.behavioralHealthIds.includes(bhId)));
+        // Match if any staff member in the shift matches the filter
+        const providerMatch = filters.providerIds.length === 0 || (shift.providerId && filters.providerIds.includes(shift.providerId));
+        const maMatch = filters.medicalAssistantIds.length === 0 || (shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
+        const frontStaffMatch = filters.frontStaffIds.length === 0 || (shift.frontStaffIds && shift.frontStaffIds.some(fsId => filters.frontStaffIds.includes(fsId)));
+        const billingMatch = filters.billingIds.length === 0 || (shift.billingIds && shift.billingIds.some(bId => filters.billingIds.includes(bId)));
+        const behavioralHealthMatch = filters.behavioralHealthIds.length === 0 || (shift.behavioralHealthIds && shift.behavioralHealthIds.some(bhId => filters.behavioralHealthIds.includes(bhId)));
         
         const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
         
