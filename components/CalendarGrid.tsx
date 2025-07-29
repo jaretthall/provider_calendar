@@ -190,9 +190,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
 
   const orderedDayHeaders = useMemo(() => {
     const headers = [...DAYS_OF_WEEK.slice(weekStartsOn), ...DAYS_OF_WEEK.slice(0, weekStartsOn)];
-    console.log('Calendar headers:', headers);
-    console.log('DAYS_OF_WEEK:', DAYS_OF_WEEK);
-    console.log('weekStartsOn:', weekStartsOn);
     return headers;
   }, [weekStartsOn]);
 
@@ -204,15 +201,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
     const firstDayActual = firstDayOfMonth.getDay(); // 0 for Sun, 1 for Mon...
     const paddingDaysCount = (firstDayActual - weekStartsOn + 7) % 7;
     
-    console.log('Month grid generation:', {
-      year,
-      month,
-      firstDayOfMonth: firstDayOfMonth.toDateString(),
-      lastDayOfMonth: lastDayOfMonth.toDateString(),
-      firstDayActual,
-      weekStartsOn,
-      paddingDaysCount
-    });
 
     for (let i = 0; i < paddingDaysCount; i++) {
       grid.push(addDays(new Date(firstDayOfMonth), -(paddingDaysCount - i)));
@@ -230,13 +218,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
         grid.push(addDays(new Date(lastDayOfMonth), i));
     }
     
-    console.log('Final grid:', {
-      gridLength: grid.length,
-      totalCells,
-      cellsToFill,
-      firstDay: grid[0]?.toDateString(),
-      lastDay: grid[grid.length - 1]?.toDateString()
-    });
     
     return grid;
   }, [year, month, weekStartsOn]);
@@ -401,14 +382,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ currentDate, allShifts, fil
   return (
     <div className="bg-white shadow-lg rounded-lg p-1 md:p-2">
       <div className="grid grid-cols-7 gap-px border-l border-t border-gray-200" role="rowgroup">
-        {orderedDayHeaders.map((day, index) => {
-          console.log(`Rendering header ${index}:`, day);
-          return (
-            <div key={day} role="columnheader" className="py-2 text-center font-semibold text-xs sm:text-sm text-gray-600 bg-gray-50 border-r border-b border-gray-200">
-              {day}
-            </div>
-          );
-        })}
+        {orderedDayHeaders.map((day, index) => (
+          <div key={day} role="columnheader" className="py-2 text-center font-semibold text-xs sm:text-sm text-gray-600 bg-gray-50 border-r border-b border-gray-200">
+            {day}
+          </div>
+        ))}
       </div>
       <div className="grid grid-cols-7 auto-rows-fr gap-px border-l border-gray-200 min-h-[75vh]" role="rowgroup">
         {monthGridDays.map((dayObj, index) => {
