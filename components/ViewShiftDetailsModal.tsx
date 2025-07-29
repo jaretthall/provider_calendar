@@ -168,7 +168,7 @@ const ViewShiftDetailsModal: React.FC<ViewShiftDetailsModalProps> = ({
 
   return (
     <div className="space-y-4 text-sm">
-      <h3 className="text-lg font-semibold text-gray-800 mb-3" style={{ color: singleShift.color.startsWith('bg-') ? undefined : singleShift.color }}>
+      <h3 className="text-lg font-semibold text-gray-800 mb-3" style={{ color: singleShift.color && !singleShift.color.startsWith('bg-') ? singleShift.color : undefined }}>
         {singleShift.title || (singleShift.isVacation ? "Vacation / Time Off" : "Scheduled Shift")}
       </h3>
 

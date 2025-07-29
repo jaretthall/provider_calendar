@@ -132,6 +132,28 @@ export const USER_ROLES_CONFIG = {
 export const INITIAL_USER_SETTINGS: UserSettings = {
   defaultCalendarView: 'month',
   weekStartsOn: 0, // Sunday
+  departmentDefaults: {
+    providers: {
+      startTime: '07:30',
+      endTime: '17:00'
+    },
+    medicalAssistants: {
+      startTime: '07:30', 
+      endTime: '17:00'
+    },
+    frontStaff: {
+      startTime: '08:00',
+      endTime: '17:00'
+    },
+    billing: {
+      startTime: '08:00',
+      endTime: '17:00'
+    },
+    behavioralHealth: {
+      startTime: '08:00',
+      endTime: '17:00'
+    }
+  }
 };
 
 export const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

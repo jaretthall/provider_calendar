@@ -204,10 +204,21 @@ export const generateRecurringDates = (
                     }
                     break;
                 case RecurringFrequency.WEEKLY:
-                    if (daysOfWeek?.includes(currentDate.getDay())) isValidForPatternStart = true;
+                    let weeklyDaysOfWeek = daysOfWeek;
+                    if (!weeklyDaysOfWeek || weeklyDaysOfWeek.length === 0) {
+                        weeklyDaysOfWeek = [baseShiftStartDate.getDay()];
+                        console.log(`🔧 Fixed empty daysOfWeek for shift ${baseShift.id}, startDate: ${baseShift.startDate}, day: ${baseShiftStartDate.getDay()}`);
+                    }
+                    if (weeklyDaysOfWeek.includes(currentDate.getDay())) {
+                        isValidForPatternStart = true;
+                    }
                     break;
                 case RecurringFrequency.BI_WEEKLY:
-                     if (daysOfWeek?.includes(currentDate.getDay())) {
+                    let biWeeklyDaysOfWeek = daysOfWeek;
+                    if (!biWeeklyDaysOfWeek || biWeeklyDaysOfWeek.length === 0) {
+                        biWeeklyDaysOfWeek = [baseShiftStartDate.getDay()];
+                    }
+                    if (biWeeklyDaysOfWeek.includes(currentDate.getDay())) {
                         const msInDay = 24 * 60 * 60 * 1000;
                         const daysSinceOriginalStart = Math.floor((currentDate.getTime() - baseShiftStartDate.getTime()) / msInDay);
                         const weeksSinceOriginalStart = Math.floor(daysSinceOriginalStart / 7);
@@ -247,7 +258,11 @@ export const generateRecurringDates = (
 
                     let includeThisDayDueToRule = true;
                     if ((frequency === RecurringFrequency.WEEKLY || frequency === RecurringFrequency.BI_WEEKLY) && shiftDurationDays > 0) {
-                        if (!daysOfWeek?.includes(dayOfInstance.getDay())) {
+                        let effectiveDaysOfWeek = daysOfWeek;
+                        if (!effectiveDaysOfWeek || effectiveDaysOfWeek.length === 0) {
+                            effectiveDaysOfWeek = [baseShiftStartDate.getDay()];
+                        }
+                        if (!effectiveDaysOfWeek.includes(dayOfInstance.getDay())) {
                             includeThisDayDueToRule = false;
                         }
                     }

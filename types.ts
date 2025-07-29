@@ -94,12 +94,22 @@ export interface ToastMessage {
 
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
+export interface DepartmentDefaultTimes {
+  startTime: string; // e.g., '07:30'
+  endTime: string;   // e.g., '17:00'
+}
+
 export interface UserSettings {
   defaultCalendarView: CalendarViewMode;
   weekStartsOn: 0 | 1; // 0 for Sunday, 1 for Monday
-  // Future settings can be added here
-  // defaultShiftStartTime: string; // e.g., '09:00'
-  // defaultShiftEndTime: string;   // e.g., '17:00'
+  // Department-specific default shift times
+  departmentDefaults: {
+    providers: DepartmentDefaultTimes;
+    medicalAssistants: DepartmentDefaultTimes;
+    frontStaff: DepartmentDefaultTimes;
+    billing: DepartmentDefaultTimes;
+    behavioralHealth: DepartmentDefaultTimes;
+  };
 }
 
 // Context Types

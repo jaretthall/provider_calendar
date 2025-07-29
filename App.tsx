@@ -581,10 +581,7 @@ const MainApplication: React.FC = () => {
   const getFrontStaffById = (id: string) => frontStaff.find(fs => fs.id === id);
   const getBillingById = (id: string) => billing.find(b => b.id === id);
   const getBehavioralHealthById = (id: string) => {
-    console.log('🔍 getBehavioralHealthById called with ID:', id);
-    const found = behavioralHealth.find(bh => bh.id === id);
-    console.log('🔍 getBehavioralHealthById result:', found);
-    return found;
+    return behavioralHealth.find(bh => bh.id === id);
   };
 
  const addShift = async (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Shift, Provider, ClinicType, RecurringRule, RecurringFrequency, MedicalAssistant, FrontStaff, Billing, BehavioralHealth } from '../types';
-import { AppContext, ToastContext, ModalContext } from '../App';
+import { AppContext, ToastContext, ModalContext, SettingsContext } from '../App';
 import { useAuth, usePermissions } from '../hooks/useAuth';
 import { PREDEFINED_COLORS, VACATION_COLOR, DEFAULT_EVENT_COLOR } from '../constants';
 import RecurringShiftFormSection from './RecurringShiftFormSection';
@@ -41,15 +41,36 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   const appContext = useContext(AppContext);
   const toastContext = useContext(ToastContext); 
   const modalContext = useContext(ModalContext);
+  const settingsContext = useContext(SettingsContext);
   
   // Use new authentication hooks
   const { user: currentUser } = useAuth();
   const { canEdit } = usePermissions();
 
-  if (!appContext || !toastContext || !modalContext) throw new Error("Context not found");
+  if (!appContext || !toastContext || !modalContext || !settingsContext) throw new Error("Context not found");
   const { providers, clinics, medicalAssistants, frontStaff, billing, behavioralHealth, shifts: allShifts, addShift, updateShift, deleteShift, getProviderById, getClinicTypeById, getMedicalAssistantById } = appContext; 
   const { addToast } = toastContext; 
   const { openModal } = modalContext;
+  const { settings } = settingsContext;
+
+  // Helper function to get default times for a department
+  const getDepartmentDefaults = (department: string) => {
+    const defaults = settings.departmentDefaults;
+    switch (department) {
+      case 'providers':
+        return defaults?.providers || { startTime: '07:30', endTime: '17:00' };
+      case 'medicalAssistants':
+        return defaults?.medicalAssistants || { startTime: '07:30', endTime: '17:00' };
+      case 'frontStaff':
+        return defaults?.frontStaff || { startTime: '08:00', endTime: '17:00' };
+      case 'billing':
+        return defaults?.billing || { startTime: '08:00', endTime: '17:00' };
+      case 'behavioralHealth':
+        return defaults?.behavioralHealth || { startTime: '08:00', endTime: '17:00' };
+      default:
+        return { startTime: '09:00', endTime: '17:00' };
+    }
+  };
 
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [providerId, setProviderId] = useState<string>('');
@@ -60,8 +81,24 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
   const [selectedBehavioralHealthIds, setSelectedBehavioralHealthIds] = useState<string[]>([]);
   const [currentStartDate, setStartDate] = useState<string>(initialDate || getISODateString(new Date()));
   const [currentEndDate, setEndDate] = useState<string>(initialDate || getISODateString(new Date()));
-  const [startTime, setStartTime] = useState<string>('09:00');
-  const [endTime, setEndTime] = useState<string>('17:00');
+  const [startTime, setStartTime] = useState<string>(() => {
+    // Get default times based on initial department selection
+    const initialDepartment = shift ? (shift.providerId ? 'providers' : 
+      shift.medicalAssistantIds?.length ? 'medicalAssistants' : 
+      shift.frontStaffIds?.length ? 'frontStaff' : 
+      shift.billingIds?.length ? 'billing' : 
+      shift.behavioralHealthIds?.length ? 'behavioralHealth' : '') : '';
+    return shift?.startTime || getDepartmentDefaults(initialDepartment).startTime;
+  });
+  const [endTime, setEndTime] = useState<string>(() => {
+    // Get default times based on initial department selection
+    const initialDepartment = shift ? (shift.providerId ? 'providers' : 
+      shift.medicalAssistantIds?.length ? 'medicalAssistants' : 
+      shift.frontStaffIds?.length ? 'frontStaff' : 
+      shift.billingIds?.length ? 'billing' : 
+      shift.behavioralHealthIds?.length ? 'behavioralHealth' : '') : '';
+    return shift?.endTime || getDepartmentDefaults(initialDepartment).endTime;
+  });
   const [isVacation, setIsVacation] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>('');
   const [currentRecurringRule, setRecurringRule] = useState<RecurringRule | undefined>({ frequency: RecurringFrequency.NONE });
@@ -279,6 +316,13 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     setSelectedBehavioralHealthIds([]);
     setAssignedToProviderId('');
     setTimesMismatchWarning(null);
+    
+    // Update default times based on selected department
+    if (!shift) { // Only set defaults for new shifts, not when editing existing ones
+      const departmentDefaults = getDepartmentDefaults(department);
+      setStartTime(departmentDefaults.startTime);
+      setEndTime(departmentDefaults.endTime);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -286,8 +330,24 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     
     // Enhanced validation using new utilities
     // Properly sanitize time inputs - ensure empty/whitespace strings become undefined
-    const sanitizedStartTime = startTime && startTime.trim() ? startTime.trim() : undefined;
-    const sanitizedEndTime = endTime && endTime.trim() ? endTime.trim() : undefined;
+    // Also convert HH:MM:SS format to HH:MM format for validation
+    const sanitizedStartTime = startTime && startTime.trim() ? startTime.trim().substring(0, 5) : undefined;
+    const sanitizedEndTime = endTime && endTime.trim() ? endTime.trim().substring(0, 5) : undefined;
+    
+    console.log('DEBUG - Time validation:', {
+      startTime: `"${startTime}"`,
+      endTime: `"${endTime}"`,
+      sanitizedStartTime: `"${sanitizedStartTime}"`,
+      sanitizedEndTime: `"${sanitizedEndTime}"`,
+      selectedDepartment,
+      isVacation
+    });
+    
+    console.log('DEBUG - MA Assignment:', {
+      selectedDepartment,
+      assignedToProviderId,
+      selectedMAIds
+    });
     
     const shiftValidation = validateShiftEnhanced({
       providerId,
@@ -632,8 +692,13 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Only providers with shifts on {new Date(currentStartDate).toLocaleDateString()} are shown.
+              Only providers with shifts on {currentStartDate} are shown.
             </p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="mt-1 text-xs text-blue-500">
+                DEBUG - currentStartDate: {currentStartDate}, Available providers: {getProvidersWithShiftsOnDate(allShifts, activeProviders, new Date(currentStartDate)).length}
+              </p>
+            )}
           </div>
 
           {/* Time Mismatch Warning */}

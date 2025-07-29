@@ -170,15 +170,22 @@ const DayCalendarGrid: React.FC<DayCalendarGridProps> = ({ currentDate, allShift
     const dataForDay = { shifts: [] as Shift[], vacations: [] as Shift[], vacationInitials: [] as string[] };
     
     const relevantShifts = allShifts.filter(shift => {
-        // Logic: show only items that are checked (in the filter arrays), or show all if nothing is selected
-        const providerMatch = filters.providerIds.length === 0 || (shift.providerId && filters.providerIds.includes(shift.providerId));
-        const maMatch = filters.medicalAssistantIds.length === 0 || (shift.medicalAssistantIds && shift.medicalAssistantIds.some(maId => filters.medicalAssistantIds.includes(maId)));
-        const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
+        // Logic: show only shifts based on their PRIMARY type, not related assignments
+        // Determine the primary shift type - the key is the PRIMARY staff assignment, not secondary assignments
+        const isPrimaryProviderShift = shift.providerId; // Provider shifts can have MAs assigned to them
+        const isPrimaryMAShift = shift.medicalAssistantIds && shift.medicalAssistantIds.length > 0 && !shift.providerId; // MA shifts without provider
+        const isPrimaryFrontStaffShift = shift.frontStaffIds && shift.frontStaffIds.length > 0 && !shift.providerId && !shift.medicalAssistantIds;
+        const isPrimaryBillingShift = shift.billingIds && shift.billingIds.length > 0 && !shift.providerId && !shift.medicalAssistantIds && !shift.frontStaffIds;
+        const isPrimaryBehavioralHealthShift = shift.behavioralHealthIds && shift.behavioralHealthIds.length > 0 && !shift.providerId && !shift.medicalAssistantIds && !shift.frontStaffIds && !shift.billingIds;
         
-        // Check new staff types - show only if selected
-        const frontStaffMatch = filters.frontStaffIds.length === 0 || (shift.frontStaffIds && shift.frontStaffIds.some(fsId => filters.frontStaffIds.includes(fsId)));
-        const billingMatch = filters.billingIds.length === 0 || (shift.billingIds && shift.billingIds.some(bId => filters.billingIds.includes(bId)));
-        const behavioralHealthMatch = filters.behavioralHealthIds.length === 0 || (shift.behavioralHealthIds && shift.behavioralHealthIds.some(bhId => filters.behavioralHealthIds.includes(bhId)));
+        // Match based on primary shift type only
+        const providerMatch = filters.providerIds.length === 0 || (isPrimaryProviderShift && filters.providerIds.includes(shift.providerId!));
+        const maMatch = filters.medicalAssistantIds.length === 0 || (isPrimaryMAShift && shift.medicalAssistantIds!.some(maId => filters.medicalAssistantIds.includes(maId)));
+        const frontStaffMatch = filters.frontStaffIds.length === 0 || (isPrimaryFrontStaffShift && shift.frontStaffIds!.some(fsId => filters.frontStaffIds.includes(fsId)));
+        const billingMatch = filters.billingIds.length === 0 || (isPrimaryBillingShift && shift.billingIds!.some(bId => filters.billingIds.includes(bId)));
+        const behavioralHealthMatch = filters.behavioralHealthIds.length === 0 || (isPrimaryBehavioralHealthShift && shift.behavioralHealthIds!.some(bhId => filters.behavioralHealthIds.includes(bhId)));
+        
+        const clinicMatch = shift.isVacation || filters.clinicTypeIds.length === 0 || (shift.clinicTypeId && filters.clinicTypeIds.includes(shift.clinicTypeId));
         
         // Vacation logic: show if showVacations is true, hide if false
         const vacationMatchOverall = shift.isVacation ? filters.showVacations : true;

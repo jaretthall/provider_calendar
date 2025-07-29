@@ -88,10 +88,31 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
   let assignedMAs: MedicalAssistant[] = [];
   if (shift.providerId) {
     const assignedMAShifts = getMAsAssignedToProviderOnDate(allShifts, shift.providerId, instanceDate);
+    console.log(`🔍 ShiftBadge Debug for provider ${shift.providerId} on ${getISODateString(instanceDate)}:`, {
+      assignedMAShifts: assignedMAShifts.length,
+      maIds: assignedMAShifts.flatMap(s => s.medicalAssistantIds || [])
+    });
     assignedMAs = assignedMAShifts
       .flatMap(maShift => maShift.medicalAssistantIds || [])
-      .map(id => getMedicalAssistantById(id))
+      .map(id => {
+        const ma = getMedicalAssistantById(id);
+        if (!ma) console.log(`❌ Could not find MA with ID: ${id}`);
+        return ma;
+      })
       .filter(ma => ma !== undefined) as MedicalAssistant[];
+    if (assignedMAs.length > 0) {
+      console.log(`✅ ShiftBadge found ${assignedMAs.length} MAs:`, assignedMAs.map(ma => ma.name));
+    }
+  }
+
+  // For MA shifts, get the assigned provider information
+  let assignedProvider: Provider | undefined;
+  if (shift.medicalAssistantIds && shift.medicalAssistantIds.length > 0 && shift.assignedToProviderId) {
+    assignedProvider = getProviderById(shift.assignedToProviderId);
+    console.log(`🔍 MA shift assigned to provider:`, {
+      assignedToProviderId: shift.assignedToProviderId,
+      providerName: assignedProvider?.name
+    });
   }
   const clinic = shift.clinicTypeId ? getClinicTypeById(shift.clinicTypeId) : undefined;
 
@@ -99,6 +120,9 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
   if (clinic) tooltipText += ` @ ${clinic.name}`;
   if (assignedMAs.length > 0) {
     tooltipText += `\nMAs: ${assignedMAs.map(ma => ma.name).join(', ')}`;
+  }
+  if (assignedProvider) {
+    tooltipText += `\nWorking with: ${assignedProvider.name}`;
   }
   if (shift.startTime && shift.endTime) {
     tooltipText += `\nTime: ${formatTime(shift.startTime)} - ${formatTime(shift.endTime)}`;
@@ -115,6 +139,9 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
   if (assignedMAs.length > 0) {
     ariaLabelText += ` with Medical Assistants: ${assignedMAs.map(ma => ma.name).join(', ')}`;
   }
+  if (assignedProvider) {
+    ariaLabelText += ` working with Provider: ${assignedProvider.name}`;
+  }
   ariaLabelText += ` on ${instanceDate.toLocaleDateString()}`;
   if (shift.startTime && shift.endTime) {
     ariaLabelText += ` from ${formatTime(shift.startTime)} to ${formatTime(shift.endTime)}.`;
@@ -130,6 +157,14 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
   const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     if (isDragging) return; 
     e.stopPropagation(); 
+    
+    console.log(`🔍 SHIFT CLICKED: ${shift.id} on ${dateString}`, {
+      providerId: shift.providerId,
+      behavioralHealthIds: shift.behavioralHealthIds,
+      frontStaffIds: shift.frontStaffIds,
+      primaryStaffName,
+      shiftData: shift
+    });
     
     let modalProps: any = { shift };
 
@@ -180,6 +215,16 @@ const ShiftBadge: React.FC<ShiftBadgeProps> = ({ shift, instanceDate, isConflict
             <UsersIcon className="h-2.5 w-2.5 flex-shrink-0 opacity-70" aria-hidden="true" />
             <span className="truncate" title={`MAs: ${assignedMAs.map(ma => ma.name).join(', ')}`}>
               {assignedMAs.map(ma => ma.name).join(', ')}
+            </span>
+          </div>
+        )}
+        {assignedProvider && (
+          <div className="flex items-center space-x-1 w-full truncate text-white/80 mt-0.5">
+            <svg className="h-2.5 w-2.5 flex-shrink-0 opacity-70" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+            <span className="truncate" title={`Working with: ${assignedProvider.name}`}>
+              w/ {assignedProvider.name}
             </span>
           </div>
         )}

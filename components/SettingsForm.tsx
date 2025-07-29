@@ -57,6 +57,19 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
     }));
   };
 
+  const handleDepartmentTimeChange = (department: string, field: 'startTime' | 'endTime', value: string) => {
+    setCurrentSettings(prev => ({
+      ...prev,
+      departmentDefaults: {
+        ...prev.departmentDefaults,
+        [department]: {
+          ...prev.departmentDefaults[department as keyof typeof prev.departmentDefaults],
+          [field]: value
+        }
+      }
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -149,24 +162,163 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ onClose }) => {
         <p id="weekStartsOnHelp" className="mt-1 text-xs text-gray-500">Choose whether your week view starts on Sunday or Monday.</p>
       </div>
       
-      {/* 
-      Future settings example:
-      <div>
-        <label htmlFor="defaultShiftStartTime" className="block text-sm font-medium text-gray-700">
-          Default Shift Start Time (Future)
-        </label>
-        <input
-          type="time"
-          id="defaultShiftStartTime"
-          name="defaultShiftStartTime"
-          // value={currentSettings.defaultShiftStartTime || '09:00'} // Assuming UserSettings would be extended
-          onChange={handleChange}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          disabled={isSubmitting} // Or true if not implemented
-        />
-        <p className="mt-1 text-xs text-gray-500">Set a default start time when creating new shifts (not yet implemented).</p>
+      {/* Department Default Times Section */}
+      <div className="border-t pt-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Department Default Times</h3>
+        <p className="text-sm text-gray-600 mb-4">Set default start and end times for each department when creating new shifts.</p>
+        
+        <div className="space-y-4">
+          {/* Providers */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700 flex items-center">
+              <span className="mr-2">👨‍⚕️</span>
+              Providers
+            </div>
+            <div>
+              <label htmlFor="providers-start" className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+              <input
+                type="time"
+                id="providers-start"
+                value={currentSettings.departmentDefaults?.providers?.startTime || '07:30'}
+                onChange={(e) => handleDepartmentTimeChange('providers', 'startTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="providers-end" className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+              <input
+                type="time"
+                id="providers-end"
+                value={currentSettings.departmentDefaults?.providers?.endTime || '17:00'}
+                onChange={(e) => handleDepartmentTimeChange('providers', 'endTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Medical Assistants */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700 flex items-center">
+              <span className="mr-2">🩺</span>
+              Medical Assistants
+            </div>
+            <div>
+              <label htmlFor="medicalAssistants-start" className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+              <input
+                type="time"
+                id="medicalAssistants-start"
+                value={currentSettings.departmentDefaults?.medicalAssistants?.startTime || '07:30'}
+                onChange={(e) => handleDepartmentTimeChange('medicalAssistants', 'startTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="medicalAssistants-end" className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+              <input
+                type="time"
+                id="medicalAssistants-end"
+                value={currentSettings.departmentDefaults?.medicalAssistants?.endTime || '17:00'}
+                onChange={(e) => handleDepartmentTimeChange('medicalAssistants', 'endTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Front Staff */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700 flex items-center">
+              <span className="mr-2">🏢</span>
+              Front Staff
+            </div>
+            <div>
+              <label htmlFor="frontStaff-start" className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+              <input
+                type="time"
+                id="frontStaff-start"
+                value={currentSettings.departmentDefaults?.frontStaff?.startTime || '08:00'}
+                onChange={(e) => handleDepartmentTimeChange('frontStaff', 'startTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="frontStaff-end" className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+              <input
+                type="time"
+                id="frontStaff-end"
+                value={currentSettings.departmentDefaults?.frontStaff?.endTime || '17:00'}
+                onChange={(e) => handleDepartmentTimeChange('frontStaff', 'endTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Billing */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700 flex items-center">
+              <span className="mr-2">💰</span>
+              Billing
+            </div>
+            <div>
+              <label htmlFor="billing-start" className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+              <input
+                type="time"
+                id="billing-start"
+                value={currentSettings.departmentDefaults?.billing?.startTime || '08:00'}
+                onChange={(e) => handleDepartmentTimeChange('billing', 'startTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="billing-end" className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+              <input
+                type="time"
+                id="billing-end"
+                value={currentSettings.departmentDefaults?.billing?.endTime || '17:00'}
+                onChange={(e) => handleDepartmentTimeChange('billing', 'endTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Behavioral Health */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700 flex items-center">
+              <span className="mr-2">🧠</span>
+              Behavioral Health
+            </div>
+            <div>
+              <label htmlFor="behavioralHealth-start" className="block text-xs font-medium text-gray-600 mb-1">Start Time</label>
+              <input
+                type="time"
+                id="behavioralHealth-start"
+                value={currentSettings.departmentDefaults?.behavioralHealth?.startTime || '08:00'}
+                onChange={(e) => handleDepartmentTimeChange('behavioralHealth', 'startTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <label htmlFor="behavioralHealth-end" className="block text-xs font-medium text-gray-600 mb-1">End Time</label>
+              <input
+                type="time"
+                id="behavioralHealth-end"
+                value={currentSettings.departmentDefaults?.behavioralHealth?.endTime || '17:00'}
+                onChange={(e) => handleDepartmentTimeChange('behavioralHealth', 'endTime', e.target.value)}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+        </div>
       </div>
-       */}
 
       {/* Staff Hours Export Section */}
       <div className="border-t pt-6">
