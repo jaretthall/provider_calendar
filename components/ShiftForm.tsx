@@ -181,8 +181,8 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
       behavioralHealthIds: selectedDepartment === 'behavioralHealth' ? selectedBehavioralHealthIds : [],
       startDate: currentStartDate,
       endDate: currentEndDate,
-      startTime,
-      endTime,
+      startTime: sanitizedStartTime,
+      endTime: sanitizedEndTime,
       isVacation,
       notes,
       recurringRule: currentRecurringRule,
@@ -285,12 +285,16 @@ const ShiftForm: React.FC<ShiftFormProps> = ({
     e.preventDefault();
     
     // Enhanced validation using new utilities
+    // Properly sanitize time inputs - ensure empty/whitespace strings become undefined
+    const sanitizedStartTime = startTime && startTime.trim() ? startTime.trim() : undefined;
+    const sanitizedEndTime = endTime && endTime.trim() ? endTime.trim() : undefined;
+    
     const shiftValidation = validateShiftEnhanced({
       providerId,
       startDate: currentStartDate,
       endDate: currentEndDate,
-      startTime: startTime.trim() ? startTime.trim() : undefined,
-      endTime: endTime.trim() ? endTime.trim() : undefined,
+      startTime: sanitizedStartTime,
+      endTime: sanitizedEndTime,
       isVacation,
       clinicTypeId,
       medicalAssistantIds: selectedMAIds,
