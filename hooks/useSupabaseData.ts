@@ -559,28 +559,52 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
 
   // Update shifts with proper upsert logic
   const updateShifts = useCallback(async (newShifts: Shift[] | ((prev: Shift[]) => Shift[])) => {
-    const shiftsToSet = typeof newShifts === 'function' 
+    const shiftsToSet = typeof newShifts === 'function'
       ? newShifts(data)
       : newShifts;
 
     if (!isOnline) {
-      throw new Error('Supabase not available');
+      console.log('⚠️ Supabase not available - skipping update');
+      // Still update local state even if offline
+      setData(shiftsToSet);
+      return;
     }
 
     try {
       setLoading(true);
       setError(null);
       console.log('💾 Updating shifts in Supabase');
+      console.log('📝 Current data count:', data.length);
+      console.log('📝 New shifts count:', shiftsToSet.length);
 
       // CRITICAL FIX: Only upsert shifts that have actually changed
       // Find which shifts are new or different from current data
       const changedShifts = shiftsToSet.filter(newShift => {
         const existingShift = data.find(s => s.id === newShift.id);
-        if (!existingShift) return true; // New shift
-        
+        if (!existingShift) {
+          console.log(`🆕 New shift: ${newShift.id} - ${newShift.title}`);
+          return true; // New shift
+        }
+
         // Check if shift has actually changed
-        return JSON.stringify(existingShift) !== JSON.stringify(newShift);
+        const hasChanged = JSON.stringify(existingShift) !== JSON.stringify(newShift);
+        if (hasChanged) {
+          console.log(`✏️ Changed shift: ${newShift.id} - ${newShift.title}`);
+        }
+        return hasChanged;
       });
+
+      // Check for deleted shifts
+      const deletedShifts = data.filter(existingShift =>
+        !shiftsToSet.some(newShift => newShift.id === existingShift.id)
+      );
+
+      if (deletedShifts.length > 0) {
+        console.log(`🗑️ Shifts to delete: ${deletedShifts.length}`);
+        deletedShifts.forEach(shift => {
+          console.log(`  - Deleting: ${shift.id} - ${shift.title}`);
+        });
+      }
 
       console.log(`📊 Upserting ${changedShifts.length} changed shifts out of ${shiftsToSet.length} total`);
 
@@ -623,8 +647,10 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
       setData(shiftsToSet);
       console.log('✅ Successfully updated shifts in local state');
       
-      // CRITICAL FIX: Verify database sync without full refetch
-      // This ensures React state stays in sync with database without causing duplicates
+      // DISABLED: Sync verification was causing race conditions
+      // The verification was triggering re-fetches that would overwrite newly added shifts
+      // before they were fully committed to the database
+      /*
       setTimeout(async () => {
         try {
           console.log('🔍 Verifying database synchronization...');
@@ -632,11 +658,11 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
             .from(TABLES.SHIFTS)
             .select('id, start_date, provider_id')
             .order('created_at');
-            
+
           if (!verifyError && verifyShifts) {
             const dbCount = verifyShifts.length;
             const localCount = shiftsToSet.length;
-            
+
             if (dbCount !== localCount) {
               console.warn(`⚠️  Database sync issue detected: DB has ${dbCount} shifts, local state has ${localCount} shifts`);
               console.log('🔄 Re-fetching to synchronize...');
@@ -649,6 +675,8 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
           console.warn('⚠️  Database sync verification failed:', syncErr);
         }
       }, 1000); // Delayed verification to allow database to process
+      */
+      console.log('✅ Shift update complete - local state synchronized');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update shifts';
       setError(errorMessage);

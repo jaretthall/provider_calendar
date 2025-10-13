@@ -419,4 +419,105 @@ AND array_length(medical_assistant_ids, 1) > 0;
 -- GROUP BY ma.id, ma.name
 -- ORDER BY assignment_count DESC;
 
-COMMIT;
+COMMIT;-- Medical Assistant Data Restoration Script (Fixed UUID Array and Color)
+-- First, ensure the assigned_to_provider_id column exists
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS assigned_to_provider_id uuid REFERENCES providers(id);
+
+-- Clear any existing MA assignments from provider shifts (cleanup from old system)
+UPDATE shifts 
+SET medical_assistant_ids = ARRAY[]::uuid[]
+WHERE provider_id IS NOT NULL 
+AND medical_assistant_ids IS NOT NULL 
+AND array_length(medical_assistant_ids, 1) > 0;
+
+-- Delete any existing standalone MA shifts to avoid duplicates
+DELETE FROM shifts 
+WHERE provider_id IS NULL 
+AND medical_assistant_ids IS NOT NULL 
+AND array_length(medical_assistant_ids, 1) > 0;
+
+-- Create MA assignments based on the schedule PDF data
+-- The key change is using uuid() casting for medical_assistant_ids and adding a color
+INSERT INTO shifts (
+    id, 
+    medical_assistant_ids, 
+    assigned_to_provider_id, 
+    clinic_type_id, 
+    start_date, 
+    end_date, 
+    start_time, 
+    end_time, 
+    is_vacation, 
+    notes, 
+    created_at, 
+    updated_at,
+    color
+)
+VALUES 
+-- Ana Guerrero @ Centro assigned to Joy Elizabeth Ferro - July 24, 2025
+(
+    gen_random_uuid(), 
+    ARRAY[uuid('0ad107d1-ba52-4e86-8d07-ec9dea9485b4')], 
+    uuid('71cd1d47-7d3d-4975-8bb3-6f5072f99c55'), 
+    uuid('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 
+    '2025-07-24', 
+    '2025-07-24', 
+    '08:00', 
+    '17:00', 
+    false, 
+    'MA assignment restored from backup', 
+    NOW(), 
+    NOW(),
+    '#3498db'  -- Blue for Centro clinic
+),
+-- Ana Guerrero @ Centro assigned to Jim Knox - July 25, 2025
+(
+    gen_random_uuid(), 
+    ARRAY[uuid('0ad107d1-ba52-4e86-8d07-ec9dea9485b4')], 
+    uuid('df2de625-08e1-474a-a48a-b92b9576f71e'), 
+    uuid('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'), 
+    '2025-07-25', 
+    '2025-07-25', 
+    '08:00', 
+    '17:00', 
+    false, 
+    'MA assignment restored from backup', 
+    NOW(), 
+    NOW(),
+    '#3498db'  -- Blue for Centro clinic
+)
+-- Note: Remove the semicolon and add more rows as needed, separated by commas
+;
+
+-- Verification queries
+SELECT 'MA shifts created' as status, COUNT(*) as count
+FROM shifts 
+WHERE medical_assistant_ids IS NOT NULL 
+AND array_length(medical_assistant_ids, 1) > 0 
+AND provider_id IS NULL;
+
+SELECT 'MA shifts with provider assignments' as status, COUNT(*) as count
+FROM shifts 
+WHERE medical_assistant_ids IS NOT NULL 
+AND array_length(medical_assistant_ids, 1) > 0 
+AND assigned_to_provider_id IS NOT NULL 
+AND provider_id IS NULL;
+
+-- Show sample assignments
+SELECT 
+    ma.name as ma_name,
+    p.name as provider_name,
+    ct.name as clinic_name,
+    s.start_date,
+    s.start_time,
+    s.end_time,
+    s.color
+FROM shifts s
+JOIN medical_assistants ma ON ma.id = ANY(s.medical_assistant_ids)
+LEFT JOIN providers p ON p.id = s.assigned_to_provider_id
+LEFT JOIN clinic_types ct ON ct.id = s.clinic_type_id
+WHERE s.medical_assistant_ids IS NOT NULL 
+AND array_length(s.medical_assistant_ids, 1) > 0 
+AND s.provider_id IS NULL
+ORDER BY s.start_date, ma.name
+LIMIT 20;

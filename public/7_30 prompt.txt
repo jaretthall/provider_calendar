@@ -1,0 +1,206 @@
+  Senda Behavioral Health Dashboard - Development Continuation
+
+  Current Status & Context
+
+  You are continuing development of a Next.js 14 behavioral health dashboard application. The previous session successfully implemented a comprehensive Crisis Management System but encountered Next.js
+  development server issues that need resolution.
+
+  Project Overview
+
+  Application: Senda Behavioral Health Dashboard
+  Framework: Next.js 14.2.30 with App Router
+  Database: Supabase (PostgreSQL)
+  Authentication: NextAuth.js
+  Styling: Tailwind CSS
+  Language: TypeScript
+
+  Current Issue - PRIORITY #1
+
+  The Next.js development server is not serving properly:
+  - Returns 500 Internal Server Error for main page
+  - JavaScript chunks (main-app.js, app-pages-internals.js) return 404 errors
+  - Server appears to start but doesn't actually serve requests
+  - Node.js version 18.19.1 (deprecated for Supabase client - should upgrade to Node 20+)
+
+  Files Modified for Troubleshooting:
+  - src/app/page.tsx - Simplified to minimal version
+  - src/app/layout.tsx - Simplified to minimal version
+  - Created src/app/test/page.tsx - Basic test page
+
+  Next Steps for Server Fix:
+  1. Investigate Node.js version compatibility issues
+  2. Check for TypeScript compilation errors blocking server startup
+  3. Verify all dependencies are properly installed
+  4. Consider clearing node_modules and reinstalling
+  5. Check for port conflicts or WSL-specific issues
+
+  Recently Completed Features
+
+  Crisis Management System (Phase 5.1) - ✅ COMPLETED
+
+  Components Created:
+  - src/components/crisis/CrisisEventForm.tsx - Comprehensive crisis reporting form
+  - src/components/crisis/CrisisEventsList.tsx - Crisis events list with filtering
+  - src/components/crisis/CrisisEventDetail.tsx - Detailed crisis event view
+
+  API Endpoints Created:
+  - src/app/api/crisis-events/route.ts - GET/POST crisis events
+  - src/app/api/crisis-events/[id]/route.ts - GET/PUT specific crisis event
+
+  Pages Created:
+  - src/app/patients/[id]/crisis/new/page.tsx - New crisis event form
+  - src/app/patients/[id]/crisis/page.tsx - Patient crisis events list
+  - src/app/patients/[id]/crisis/[eventId]/page.tsx - Crisis event detail
+  - src/app/crisis/page.tsx - Global crisis events dashboard
+
+  Enhanced Features:
+  - Added explicit risk categories (suicide, self-harm, violence, substance abuse, psychosis, medical, elopement)
+  - Added contributing risk factors (17 specific factors like "active suicidal ideation with plan")
+  - Enhanced severity descriptions with explicit risk definitions
+  - Added prominent risk alerts on patient detail pages
+  - Improved dashboard prioritization (critical patients first with visual indicators)
+  - Added crisis events to sidebar navigation
+
+  Database Schema Required (NOT YET CREATED):
+  CREATE TABLE crisis_events (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    patient_id UUID REFERENCES patients(id) ON DELETE CASCADE,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    risk_type VARCHAR(50),
+    description TEXT NOT NULL,
+    intervention_taken TEXT,
+    risk_factors TEXT,
+    location VARCHAR(255),
+    witnesses VARCHAR(255),
+    emergency_contacts_notified BOOLEAN DEFAULT false,
+    law_enforcement_involved BOOLEAN DEFAULT false,
+    medical_attention_required BOOLEAN DEFAULT false,
+    notes TEXT,
+    occurred_at TIMESTAMPTZ NOT NULL,
+    resolved BOOLEAN DEFAULT false,
+    resolved_at TIMESTAMPTZ,
+    resolved_by UUID REFERENCES users(id),
+    created_by UUID REFERENCES users(id) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE crisis_events ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Enable all access for service role" ON crisis_events FOR ALL USING (true);
+
+  Project Architecture
+
+  Key Directories:
+  - src/app/ - Next.js App Router pages and layouts
+  - src/components/ - Reusable React components
+  - src/lib/ - Utility functions, database connections, services
+  - src/providers/ - React context providers
+  - scripts/ - Database seeding and utility scripts
+
+  Important Files:
+  - .env.local - Environment configuration (Supabase keys, etc.)
+  - tailwind.config.js - Custom color scheme (grey base, gold accent, red danger)
+  - next.config.js - Next.js configuration with typed routes
+  - package.json - Dependencies and scripts
+
+  Outstanding Tasks (Todo List)
+
+  1. [CRITICAL] Fix Next.js Development Server
+    - Status: In Progress
+    - Priority: High
+    - Issues: 500 errors, missing JS chunks, server not responding
+  2. [PENDING] Implement comprehensive audit logging (Phase 6.1)
+    - Status: Pending
+    - Priority: Medium
+    - Scope: Log all user actions, data changes, system events
+  3. [PENDING] Add note versioning system (Phase 3.3)
+    - Status: Pending
+    - Priority: Medium
+    - Scope: Track changes to clinical notes with version history
+  4. [PENDING] Create report builder and export functionality (Phase 4.3)
+    - Status: Pending
+    - Priority: Medium
+    - Scope: Custom reports, data export, analytics dashboard
+
+  Key Technical Context
+
+  Authentication System:
+  - NextAuth.js configured with Supabase adapter
+  - Role-based access control (admin, provider, staff)
+  - Session management with JWT tokens
+
+  Database Relations:
+  - patients table with risk_level field
+  - users table for authentication
+  - episodes table for treatment episodes
+  - assessments table for PHQ-9, GAD-7, Edinburgh scales
+  - clinical_notes table for documentation
+  - crisis_events table (needs creation)
+
+  Color Scheme (Updated from gold to grey base):
+  - Primary: Grey (#64748b)
+  - Accent: Gold (#f59e0b) - Clinica gold, used sparingly
+  - Danger: Red (#e53e3e) - For crisis/alerts
+  - Success: Green, Warning: Yellow, Info: Blue
+
+  Recent Issues Encountered:
+  - TypeScript errors in multiple files (mostly type mismatches)
+  - Node.js version compatibility warnings with Supabase client
+  - Crisis events table doesn't exist in database yet
+  - Development server compilation failures
+
+  User Workflow Context
+
+  Critical Patient Management:
+  - Patients like "Ashley Johnson" show as "critical risk"
+  - Users need immediate clarity on WHY patients are critical risk
+  - Crisis events should be prominently displayed and easily accessible
+  - Risk alerts should appear at top of patient pages with clear action buttons
+
+  Crisis Event Documentation:
+  - Must specify exact risk type (suicide, violence, etc.)
+  - Must document contributing factors for legal compliance
+  - Interventions must be tracked with emergency response indicators
+  - High/critical events automatically update patient risk levels
+
+  Development Environment
+
+  Current Setup:
+  - WSL2 environment
+  - Node.js v18.19.1 (needs upgrade to v20+)
+  - npm v9.2.0
+  - Next.js 14.2.30
+  - Working directory: /mnt/c/Users/JarettHall/Programming/Senda_Gemini
+
+  Commands to Run:
+  - npm run dev - Start development server
+  - npm run build - Build for production
+  - npm run seed - Seed database with sample data
+
+  Immediate Action Plan
+
+  1. FIRST: Resolve Next.js server issues
+    - Check Node.js version compatibility
+    - Clear build cache and reinstall dependencies
+    - Fix any TypeScript compilation errors
+    - Test with minimal page/layout setup
+  2. SECOND: Create crisis_events table in Supabase
+    - Run the SQL provided above
+    - Test crisis event creation/retrieval
+    - Verify Ashley Johnson's critical status displays properly
+  3. THIRD: Continue with audit logging implementation (Phase 6.1)
+
+  Files Requiring Attention
+
+  Modified Recently (may need review):
+  - src/app/page.tsx - Simplified for debugging
+  - src/app/layout.tsx - Simplified for debugging
+  - All crisis management components and pages
+
+  Known Issues (TypeScript errors):
+  - src/app/page.tsx - useAuth hook property mismatch
+  - Multiple components with icon import issues
+  - Patient form type mismatches
+
+  The previous developer successfully implemented the crisis management system with comprehensive risk documentation but encountered server startup issues that prevent testing the new features. The crisis
+   system is code-complete but needs the database table created and server issues resolved to be functional.
