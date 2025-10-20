@@ -1,3 +1,7 @@
+# A string used to distinguish different Supabase projects on the same host. Defaults to the
+# working directory name when running `supabase init`.
+project_id = "calendar"
+
 [api]
 enabled = true
 port = 54321
@@ -5,20 +9,13 @@ schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
+[db]
+port = 54322
+major_version = 15
+
 [auth]
 enabled = true
-port = 54322
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
-refresh_token_rotation_enabled = true
-security_update_password_require_reauthentication = true
-
-[db]
-port = 54322
-
-[functions]
-verify_jwt = false
-
-[edge_functions]
-enabled = true
+enable_signup = true

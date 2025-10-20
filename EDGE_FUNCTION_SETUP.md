@@ -9,19 +9,47 @@ This setup enables creating users directly from the app using a Supabase Edge Fu
 
 ## Deployment Steps
 
-### 1. Login to Supabase CLI
+### 1. Initialize Supabase (if not already done)
+```bash
+# If you get config errors, initialize first:
+supabase init
+```
+
+### 2. Login to Supabase CLI
 ```bash
 supabase login
 ```
 
-### 2. Link to your Supabase project
+### 3. Link to your Supabase project
 ```bash
 supabase link --project-ref fgqhclnsndiwdecxvcxi
 ```
 
-### 3. Deploy the Edge Function
+### 4. Deploy the Edge Function
 ```bash
 supabase functions deploy create-user
+```
+
+## Troubleshooting Config Errors
+
+If you get config validation errors:
+
+### Error: Invalid keys in config
+The `config.toml` file has been updated with the correct format. If you still get errors:
+
+1. **Delete existing config and reinitialize:**
+```bash
+rm -rf supabase/.temp
+supabase init --force
+```
+
+2. **Then copy the corrected config.toml back:**
+   - The repo has the correct `supabase/config.toml` format
+   - The repo has the required `supabase/functions/import_map.json`
+
+3. **Try linking again:**
+```bash
+supabase link --project-ref fgqhclnsndiwdecxvcxi
 ```
 
 ### 4. Set Environment Variables
