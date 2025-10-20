@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, createContext, useContext } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { logShiftCreate, logShiftUpdate, logShiftDelete } from './utils/auditLog';
 import { 
   DndContext, 
   DragEndEvent, 
@@ -694,15 +695,23 @@ const MainApplication: React.FC = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    setShifts(prev => [...prev, newShift]);
+    // CRITICAL FIX: Save to database, not just local state
+    await setShifts(prev => [...prev, newShift]);
+
+    // Log the action for audit trail
+    await logShiftCreate(newShift, user?.id, user?.email);
+
     addToast(isCreatingException ? 'Shift exception created.' : 'Shift created.', 'success');
     return newShift;
   };
 
   const updateShift = async (updatedShift: Shift) => {
+    // Get the original shift for audit logging
+    const originalShift = getShiftById(updatedShift.id);
+
     let color = DEFAULT_EVENT_COLOR;
     let title = 'Staff';
-    
+
     // Determine primary staff member and color/title (same logic as addShift)
     const provider = updatedShift.providerId ? getProviderById(updatedShift.providerId) : null;
     if (provider) {
@@ -769,15 +778,22 @@ const MainApplication: React.FC = () => {
         finalSeriesId = updatedShift.id;
     }
 
-    const finalShift = { 
-        ...updatedShift, 
-        color, 
-        title, 
+    const finalShift = {
+        ...updatedShift,
+        color,
+        title,
         seriesId: finalSeriesId,
-        updatedAt: new Date().toISOString() 
+        updatedAt: new Date().toISOString()
     };
 
-    setShifts(prev => prev.map(s => (s.id === finalShift.id ? finalShift : s)));
+    // CRITICAL FIX: Save to database, not just local state
+    await setShifts(prev => prev.map(s => (s.id === finalShift.id ? finalShift : s)));
+
+    // Log the action for audit trail
+    if (originalShift) {
+      await logShiftUpdate(originalShift, finalShift, user?.id, user?.email);
+    }
+
     addToast('Shift updated.', 'success');
   };
 
@@ -788,19 +804,26 @@ const MainApplication: React.FC = () => {
     try {
       if (deleteAllOccurrences && seriesIdToDelete) {
         // Find all shifts in the series (including base shift and exceptions)
-        const seriesShiftIds = shifts
-          .filter(s => s.seriesId === seriesIdToDelete || s.id === seriesIdToDelete)
-          .map(s => s.id);
-        
+        const seriesShifts = shifts.filter(s => s.seriesId === seriesIdToDelete || s.id === seriesIdToDelete);
+        const seriesShiftIds = seriesShifts.map(s => s.id);
+
+        // Log each deletion for audit
+        for (const shift of seriesShifts) {
+          await logShiftDelete(shift, user?.id, user?.email);
+        }
+
         await deleteShiftsFromDb(seriesShiftIds);
         addToast(`Recurring series and all its occurrences/exceptions deleted.`, 'success');
       } else {
+        // Log single deletion for audit
+        await logShiftDelete(shiftToDelete, user?.id, user?.email);
+
         // Delete single shift
         await deleteShiftFromDb(shiftId);
-        
+
         if (shiftToDelete.isExceptionInstance) {
           addToast(`Shift exception for ${shiftToDelete.exceptionForDate} deleted.`, 'success');
-        } else { 
+        } else {
           addToast(`Shift "${shiftToDelete.title || shiftId}" deleted.`, 'success');
         }
       }

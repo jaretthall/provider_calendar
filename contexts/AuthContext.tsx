@@ -102,8 +102,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .eq('user_id', userId)
         .single();
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile query timeout')), 10000) // Increased to 10 seconds
       );
       
       const { data: profile, error } = await Promise.race([profilePromise, timeoutPromise]) as any;

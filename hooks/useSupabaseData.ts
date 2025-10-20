@@ -488,7 +488,8 @@ export function useSupabaseShifts(defaultValue: Shift[] = []) {
       const { data: shifts, error: fetchError } = await supabase!
         .from(TABLES.SHIFTS)
         .select('*')
-        .order('created_at');
+        .order('created_at')
+        .limit(10000); // Increased limit to get all shifts
 
       if (fetchError) throw fetchError;
 
