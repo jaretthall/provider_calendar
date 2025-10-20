@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabase';
+import { createUser, resetUserPassword as resetPassword, toggleUserStatus as toggleStatus } from '../utils/userManagement';
 
 interface User {
   id: string;
@@ -47,42 +48,77 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const createUser = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('Admin user creation requires backend API - contact system administrator');
-    // In production, this should call a backend API or Edge Function
-    // that has access to the service role key
+    setError('');
+    setSuccess('');
+    setCreating(true);
+
+    try {
+      if (!newUserEmail || !newUserPassword) {
+        throw new Error('Email and password are required');
+      }
+
+      console.log('Creating user with email:', newUserEmail);
+
+      const result = await createUser({
+        email: newUserEmail,
+        password: newUserPassword,
+        role: newUserRole as 'admin' | 'scheduler' | 'view_only'
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      console.log('User created successfully:', result.user);
+
+      // Reset form and reload users
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserRole('view_only');
+      setShowNewUserForm(false);
+
+      await loadUsers();
+
+      if (result.user?.id.length === 36) {
+        // Full user creation (Edge Function worked)
+        setSuccess(`User ${newUserEmail} created successfully! They can now sign in.`);
+      } else {
+        // Profile-only creation (fallback)
+        setSuccess(`User profile created for ${newUserEmail}. They need to sign up at the login page to activate their account.`);
+      }
+
+    } catch (err: any) {
+      console.error('User creation error:', err);
+      setError(err.message || 'Failed to create user');
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const resetUserPassword = async (userId: string, email: string) => {
+  const handleResetPassword = async (userId: string, email: string) => {
     setError('');
     setSuccess('');
 
     try {
-      // Send password reset email
-      if (!supabase) throw new Error('Supabase client not available');
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-
+      const result = await resetPassword(email);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send reset email');
+      }
       setSuccess(`Password reset email sent to ${email}`);
     } catch (err: any) {
-      setError(`Failed to send reset email: ${err.message}`);
+      setError(err.message);
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      if (!supabase) throw new Error('Supabase client not available');
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ is_active: !currentStatus })
-        .eq('user_id', userId);
+      const result = await toggleStatus(userId, currentStatus);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update user status');
+      }
 
-      if (error) throw error;
-      
       loadUsers();
       setSuccess(`User ${currentStatus ? 'deactivated' : 'activated'} successfully`);
     } catch (err: any) {
@@ -126,7 +162,7 @@ const UserManagement: React.FC = () => {
       )}
 
       {showNewUserForm && (
-        <form onSubmit={createUser} className="mb-6 p-4 border rounded-lg">
+        <form onSubmit={handleCreateUser} className="mb-6 p-4 border rounded-lg">
           <h3 className="font-semibold mb-4">Create New User</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
@@ -215,14 +251,14 @@ const UserManagement: React.FC = () => {
                 <td className="py-2">
                   <div className="flex gap-2">
                     <button
-                      onClick={() => resetUserPassword(u.id, u.email)}
+                      onClick={() => handleResetPassword(u.id, u.email)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                       disabled={u.id === user?.id}
                     >
                       Reset Password
                     </button>
                     <button
-                      onClick={() => toggleUserStatus(u.id, u.is_active)}
+                      onClick={() => handleToggleStatus(u.id, u.is_active)}
                       className="text-orange-600 hover:text-orange-800 text-sm"
                       disabled={u.id === user?.id}
                     >
