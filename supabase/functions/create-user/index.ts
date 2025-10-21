@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 serve(async (req) => {
@@ -20,7 +21,7 @@ serve(async (req) => {
     }
 
     // Create Supabase clients
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const serviceRoleKey = Deno.env.get('JWT_legacy_KEY') ?? ''
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 
     // Client for auth operations (uses the provided JWT)
