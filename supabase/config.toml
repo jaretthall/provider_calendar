@@ -23,10 +23,6 @@ site_url = "https://jaretthall.github.io"
 additional_redirect_urls = ["http://localhost:5173", "https://jaretthall.github.io/Calendar"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604800 (1 week).
 jwt_expiry = 3600
-# If disabled, the refresh token will never expire.
-refresh_token_rotation_enabled = true
-# Allows refresh tokens to expire
-refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 
@@ -37,11 +33,6 @@ enable_signup = true
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = false
-
-# Use pre-defined map of claims
-[auth.jwt]
-expiry = 3600
-secret = "super-secret-jwt-token-with-at-least-32-characters-long"
 
 [db]
 # Port to use for the local database URL.

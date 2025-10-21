@@ -102,12 +102,12 @@ serve(async (req) => {
     }
 
     // Use service role to bypass RLS when inserting profile
-    const { error: profileError } = await supabaseAdmin
+    const { error: insertError } = await supabaseAdmin
       .from('user_profiles')
       .insert([profileData])
 
-    if (profileError) {
-      console.error('Profile creation error:', profileError)
+    if (insertError) {
+      console.error('Profile creation error:', insertError)
 
       // Cleanup: Delete the auth user if profile creation failed
       try {
@@ -117,7 +117,7 @@ serve(async (req) => {
         console.error('Failed to cleanup auth user:', cleanupError)
       }
 
-      throw new Error(`Failed to create user profile: ${profileError.message}`)
+      throw new Error(`Failed to create user profile: ${insertError.message}`)
     }
 
     console.log('User profile created successfully')
