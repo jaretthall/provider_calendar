@@ -56,6 +56,8 @@ supabase link --project-ref fgqhclnsndiwdecxvcxi
 In your Supabase dashboard, go to Settings → Edge Functions and set:
 - `SUPABASE_SERVICE_ROLE_KEY`: Your service role key from Settings → API
 
+**IMPORTANT**: The environment variable must be named exactly `SUPABASE_SERVICE_ROLE_KEY` (not `SERVICE_ROLE_KEY`)
+
 ### 5. Test the Function
 After deployment, the function will be available at:
 `https://fgqhclnsndiwdecxvcxi.supabase.co/functions/v1/create-user`

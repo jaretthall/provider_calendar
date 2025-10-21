@@ -19,17 +19,20 @@ serve(async (req) => {
       throw new Error('Missing authorization header')
     }
 
-    // Create Supabase client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+    // Create Supabase clients
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+
+    // Client for auth operations (uses the provided JWT)
+    const supabaseAuth = createClient(supabaseUrl, serviceRoleKey)
+
+    // Admin client for bypassing RLS (uses service role directly)
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
-    )
+    })
 
     // Verify the requesting user is an admin
     const jwt = authHeader.replace('Bearer ', '')
@@ -58,6 +61,8 @@ serve(async (req) => {
     }
 
     console.log('Creating user:', { email, role })
+    console.log('Service role key present:', !!serviceRoleKey)
+    console.log('Service role key length:', serviceRoleKey.length)
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -95,6 +100,7 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     }
 
+    // Use service role to bypass RLS when inserting profile
     const { error: profileError } = await supabaseAdmin
       .from('user_profiles')
       .insert([profileData])
