@@ -54,9 +54,10 @@ supabase link --project-ref fgqhclnsndiwdecxvcxi
 
 ### 4. Set Environment Variables
 In your Supabase dashboard, go to Settings → Edge Functions and set:
-- `SUPABASE_SERVICE_ROLE_KEY`: Your service role key from Settings → API
+- `SUPABASE_SERVICE_ROLE_KEY`: Your service role key (JWT token starting with eyJ...)
+- `SUPABASE_URL`: Your Supabase project URL (https://fgqhclnsndiwdecxvcxi.supabase.co)
 
-**IMPORTANT**: The environment variable must be named exactly `SUPABASE_SERVICE_ROLE_KEY` (not `SERVICE_ROLE_KEY`)
+**IMPORTANT**: Use the full JWT service role key, not the short API key format
 
 ### 5. Test the Function
 After deployment, the function will be available at:

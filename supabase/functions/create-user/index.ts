@@ -21,8 +21,8 @@ serve(async (req) => {
     }
 
     // Create Supabase clients
-    const serviceRoleKey = Deno.env.get('JWT_legacy_KEY') ?? ''
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const serviceRoleKey = Deno.env.get('SECRET_KEY') ?? ''
+    const supabaseUrl = Deno.env.get('PROJECT_URL') ?? ''
 
     // Client for auth operations (uses the provided JWT)
     const supabaseAuth = createClient(supabaseUrl, serviceRoleKey)
