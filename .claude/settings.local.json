@@ -22,7 +22,8 @@
       "Bash(npx supabase:*)",
       "Bash(where supabase)",
       "Bash(cmd.exe /c \"where supabase\")",
-      "Read(//mnt/c/Windows/System32/**)"
+      "Read(//mnt/c/Windows/System32/**)",
+      "Bash(timeout 30s npm run dev)"
     ],
     "deny": []
   }

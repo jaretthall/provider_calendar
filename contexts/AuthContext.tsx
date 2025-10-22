@@ -270,7 +270,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async (): Promise<void> => {
     try {
       if (supabase) {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut({ scope: 'local' });
       }
       handleSignOut();
       addToast('Successfully signed out', 'success');

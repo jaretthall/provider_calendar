@@ -2,15 +2,11 @@ import { supabase } from './supabase';
 
 export interface AuditLogEntry {
   userId?: string;
-  userEmail?: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE';
   tableName: string;
   recordId?: string;
   oldData?: any;
   newData?: any;
-  ipAddress?: string;
-  userAgent?: string;
-  sessionId?: string;
 }
 
 export const logUserAction = async (entry: AuditLogEntry): Promise<void> => {
@@ -22,38 +18,27 @@ export const logUserAction = async (entry: AuditLogEntry): Promise<void> => {
 
     // Get current user info if not provided
     let userId = entry.userId;
-    let userEmail = entry.userEmail;
 
-    if (!userId || !userEmail) {
+    if (!userId) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        userId = userId || user.id;
-        userEmail = userEmail || user.email || 'unknown@example.com';
+        userId = user.id;
       }
     }
 
-    // Get additional browser info
-    const userAgent = navigator.userAgent;
-    const sessionId = generateSessionId();
-
     const auditEntry = {
       user_id: userId,
-      user_email: userEmail,
-      action: entry.action,
       table_name: entry.tableName,
       record_id: entry.recordId,
-      old_data: entry.oldData ? JSON.stringify(entry.oldData) : null,
-      new_data: entry.newData ? JSON.stringify(entry.newData) : null,
-      ip_address: entry.ipAddress,
-      user_agent: userAgent,
-      session_id: sessionId,
-      created_at: new Date().toISOString()
+      action: entry.action.toLowerCase(), // Schema expects lowercase
+      old_values: entry.oldData ? entry.oldData : null,
+      new_values: entry.newData ? entry.newData : null
     };
 
     console.log('📝 Logging audit entry:', {
       action: entry.action,
       table: entry.tableName,
-      user: userEmail,
+      userId: userId,
       recordId: entry.recordId
     });
 
@@ -81,10 +66,9 @@ function generateSessionId(): string {
 }
 
 // Convenience functions for specific actions
-export const logShiftCreate = async (shift: any, userId?: string, userEmail?: string) => {
+export const logShiftCreate = async (shift: any, userId?: string) => {
   await logUserAction({
     userId,
-    userEmail,
     action: 'CREATE',
     tableName: 'shifts',
     recordId: shift.id,
@@ -92,10 +76,9 @@ export const logShiftCreate = async (shift: any, userId?: string, userEmail?: st
   });
 };
 
-export const logShiftUpdate = async (oldShift: any, newShift: any, userId?: string, userEmail?: string) => {
+export const logShiftUpdate = async (oldShift: any, newShift: any, userId?: string) => {
   await logUserAction({
     userId,
-    userEmail,
     action: 'UPDATE',
     tableName: 'shifts',
     recordId: newShift.id,
@@ -104,10 +87,9 @@ export const logShiftUpdate = async (oldShift: any, newShift: any, userId?: stri
   });
 };
 
-export const logShiftDelete = async (shift: any, userId?: string, userEmail?: string) => {
+export const logShiftDelete = async (shift: any, userId?: string) => {
   await logUserAction({
     userId,
-    userEmail,
     action: 'DELETE',
     tableName: 'shifts',
     recordId: shift.id,
@@ -115,10 +97,9 @@ export const logShiftDelete = async (shift: any, userId?: string, userEmail?: st
   });
 };
 
-export const logProviderAction = async (action: 'CREATE' | 'UPDATE' | 'DELETE', provider: any, oldProvider?: any, userId?: string, userEmail?: string) => {
+export const logProviderAction = async (action: 'CREATE' | 'UPDATE' | 'DELETE', provider: any, oldProvider?: any, userId?: string) => {
   await logUserAction({
     userId,
-    userEmail,
     action,
     tableName: 'providers',
     recordId: provider.id,
